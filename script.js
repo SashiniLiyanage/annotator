@@ -4730,10 +4730,6 @@ function img_loading_spinbar(image_index, show) {
 }
 
 function update_img_fn_list() {
-  var regex = document.getElementById('img_fn_list_regex').value;
-  var p = document.getElementById('filelist_preset_filters_list');
-  if ( regex === '' || regex === null ) {
-    if ( p.selectedIndex === 0 ) {
       // show all files
       _via_img_fn_list_html = [];
       _via_img_fn_list_img_index_list = [];
@@ -4745,110 +4741,6 @@ function update_img_fn_list() {
       _via_img_fn_list_html.push('</ul>');
       img_fn_list.innerHTML = _via_img_fn_list_html.join('');
       img_fn_list_scroll_to_current_file();
-    } else {
-      // filter according to preset filters
-      img_fn_list_onpresetfilter_select();
-    }
-  } else {
-    if ( p.selectedIndex === 6 ) {
-      // Filter By Region Attribute
-      filter_selected_region_attribute(regex);
-    } else {
-      // RegExp
-      img_fn_list_generate_html(regex);
-      img_fn_list.innerHTML = _via_img_fn_list_html.join('');
-      img_fn_list_scroll_to_current_file();
-    }
-  }
-}
-
-function img_fn_list_onregex() {
-  var regex = document.getElementById('img_fn_list_regex').value;
-  var p = document.getElementById('filelist_preset_filters_list');
-
-  if ( p.selectedIndex === 6 ) {
-    filter_selected_region_attribute(regex);
-    return;
-  }
-  
-  img_fn_list_generate_html( regex );
-  img_fn_list.innerHTML = _via_img_fn_list_html.join('');
-  img_fn_list_scroll_to_current_file();
-
-  // select 'regex' in the predefined filter list ( Unless Filter By Attribute is Selected)
-  if ( regex === '' ) {
-    p.selectedIndex = 0;
-  } else {
-    if ( p.options[p.selectedIndex].value != 'files_region_attribute' && 
-         p.options[p.selectedIndex].value != 'regex' ) {
-      var i;
-      for ( i=0; i<p.options.length; ++i) {
-        if ( p.options[i].value === 'regex' ) {
-          p.selectedIndex = i;
-          break;
-        }
-      }
-    }
-  }
-}
-
-function img_fn_list_onpresetfilter_select() {
-  var p = document.getElementById('filelist_preset_filters_list');
-  var filter = p.options[p.selectedIndex].value;
-  switch(filter) {
-  case 'all':
-    document.getElementById('img_fn_list_regex').value = '';
-    img_fn_list_generate_html();
-    img_fn_list.innerHTML = _via_img_fn_list_html.join('');
-    img_fn_list_scroll_to_current_file();
-    break;
-  case 'regex':
-    img_fn_list_onregex();
-    document.getElementById('img_fn_list_regex').focus();
-    break;
-  case 'files_region_attribute':
-    img_fn_list_onregex();
-    document.getElementById('img_fn_list_regex').focus();
-    break;
-  default:
-    _via_img_fn_list_html = [];
-    _via_img_fn_list_img_index_list = [];
-    _via_img_fn_list_html.push('<ul>');
-    var i;
-    for ( i=0; i < _via_image_filename_list.length; ++i ) {
-      var img_id = _via_image_id_list[i];
-      var add_to_list = false;
-      switch(filter) {
-      case 'files_without_region':
-        if ( _via_img_metadata[img_id].regions.length === 0 ) {
-          add_to_list = true;
-        }
-        break;
-      case 'files_missing_region_annotations':
-        if ( is_region_annotation_missing(img_id) ) {
-          add_to_list = true;
-        }
-        break;
-      case 'files_missing_file_annotations':
-        if ( is_file_annotation_missing(img_id) ) {
-          add_to_list = true;
-        }
-        break;
-      case 'files_error_loading':
-        if ( _via_image_load_error[i] === true ) {
-          add_to_list = true;
-        }
-      }
-      if ( add_to_list ) {
-        _via_img_fn_list_html.push( img_fn_list_ith_entry_html(i) );
-        _via_img_fn_list_img_index_list.push(i);
-      }
-    }
-    _via_img_fn_list_html.push('</ul>');
-    img_fn_list.innerHTML = _via_img_fn_list_html.join('');
-    img_fn_list_scroll_to_current_file();
-    break;
-  }
 }
 
 function filter_selected_region_attribute(property_entry) {
@@ -7072,8 +6964,6 @@ function annotation_editor_decrease_content_size() {
 function project_set_name(name) {
   _via_settings.project.name = name;
 
-  var p = document.getElementById('project_name');
-  p.value = _via_settings.project.name;
 }
 
 function project_init_default_project() {
@@ -9532,10 +9422,6 @@ function settings_save() {
   p = document.getElementById('settings_input_new_filepath');
   if ( p.value !== '' ) {
     project_filepath_add(p.value.trim());
-  }
-  p = document.getElementById('project_name');
-  if ( p.value !== _via_settings.project.name ) {
-    p.value = _via_settings.project.name;
   }
 
   if ( default_path_updated ) {
