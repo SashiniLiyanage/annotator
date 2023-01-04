@@ -141,16 +141,13 @@
       <!-- menu bar -->
       <div class="menubar">
         <ul>
-          <li onclick="show_home_panel()" style="cursor:pointer;">Home</li>
-          <li>Annotation
+          <li>Export
             <ul>
               <li onclick="download_all_region_data('csv')" title="Export annotations to a CSV file">Export Annotations (as csv)</li>
               <li onclick="download_all_region_data('json')" title="Export annotaitons to a JSON file">Export Annotations (as json)</li>
               <li onclick="download_all_region_data('coco', 'json')" title="Export annotaitons to COCO (http://cocodataset.org) format">Export Annotations (COCO format)</li>
-              <li onclick="" class="submenu_divider"></li>
 
               <li class="submenu_divider"></li>
-              <li onclick="show_annotation_data()" title="Show a preview of annotations (opens in a new browser windows)">Preview Annotations</li>
             </ul>
           </li>
         </ul>

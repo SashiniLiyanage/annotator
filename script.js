@@ -24,13 +24,13 @@ function _via_load_submodules() {
   }
   
   function _via_basic_demo_define_attributes() {
-    var attributes_json = '{"region":{"type":{"type":"dropdown","description":"Category of object","options":{"bird":"Bird","human":"Human","cup":"Cup (object)","unknown":"Unknown (object)"},"default_options":{"unknown":true}},"image_quality":{"type":"checkbox","description":"Quality of image region","options":{"blur":"Blurred region","good_illumination":"Good Illumination","frontal":"Object in Frontal View"},"default_options":{"good":true,"frontal":true,"good_illumination":true}}},"file":{"caption":{"type":"text","description":"","default_value":""},"public_domain":{"type":"radio","description":"","options":{"yes":"Yes","no":"No"},"default_options":{"no":true}},"image_url":{"type":"text","description":"","default_value":""}}}';
+    var attributes_json = '{"region":{"type":{"type":"dropdown","description":"Category of object","options":{"bird":"Bird","human":"Human","cup":"Cup (object)","unknown":"Unknown (object)"},"default_options":{"unknown":true}}},"file":{"caption":{"type":"text","description":"","default_value":""}}}';
   
     project_import_attributes_from_json(attributes_json);
   }
   
   function _via_basic_demo_define_annotations() {
-    var annotations_json = '{"adutta_swan.jpg-1":{"filename":"adutta_swan.jpg","size":-1,"regions":[{"shape_attributes":{"name":"polygon","all_points_x":[116,94,176,343,383,385,369,406,398,364,310,297,304,244,158],"all_points_y":[157,195,264,273,261,234,222,216,155,124,135,170,188,170,175]},"region_attributes":{"type":"bird","image_quality":{"good_illumination":true}}}],"file_attributes":{"caption":"Swan in lake Geneve","public_domain":"no","image_url":"http://www.robots.ox.ac.uk/~vgg/software/via/images/swan.jpg"}},"wikimedia_death_of_socrates.jpg-1":{"filename":"wikimedia_death_of_socrates.jpg","size":-1,"regions":[{"shape_attributes":{"name":"rect","x":174,"y":139,"width":108,"height":227},"region_attributes":{"type":"human","image_quality":{"good_illumination":true}}},{"shape_attributes":{"name":"rect","x":347,"y":114,"width":91,"height":209},"region_attributes":{"type":"human","image_quality":{"frontal":true,"good_illumination":true}}},{"shape_attributes":{"name":"ellipse","cx":316,"cy":180,"rx":17,"ry":12},"region_attributes":{"type":"cup"}}],"file_attributes":{"caption":"The Death of Socrates by David","public_domain":"yes","image_url":"https://en.wikipedia.org/wiki/The_Death_of_Socrates#/media/File:David_-_The_Death_of_Socrates.jpg"}}}';
+    var annotations_json = '{"adutta_swan.jpg-1":{"filename":"adutta_swan.jpg","size":-1,"regions":[{"shape_attributes":{"name":"polygon","all_points_x":[116,94,176,343,383,385,369,406,398,364,310,297,304,244,158],"all_points_y":[157,195,264,273,261,234,222,216,155,124,135,170,188,170,175]},"region_attributes":{"type":"bird"}}],"file_attributes":{"caption":"Swan in lake Geneve"}},"wikimedia_death_of_socrates.jpg-1":{"filename":"wikimedia_death_of_socrates.jpg","size":-1,"regions":[{"shape_attributes":{"name":"rect","x":174,"y":139,"width":108,"height":227},"region_attributes":{"type":"human"}},{"shape_attributes":{"name":"rect","x":347,"y":114,"width":91,"height":209},"region_attributes":{"type":"human"}},{"shape_attributes":{"name":"ellipse","cx":316,"cy":180,"rx":17,"ry":12},"region_attributes":{"type":"cup"}}],"file_attributes":{"caption":"The Death of Socrates by David"}}}';
     
     import_annotations_from_json(annotations_json);
   }
@@ -373,10 +373,6 @@ function is_content_name_valid(content_name) {
     }
   }
   return false;
-}
-
-function show_home_panel() {
-  show_single_image_view();
 }
 
 function set_display_area_content(content_name) {
@@ -1229,18 +1225,6 @@ function select_only_region(region_id) {
 
 function set_region_select_state(region_id, is_selected) {
   _via_region_selected_flag[region_id] = is_selected;
-}
-
-function show_annotation_data() {
-  pack_via_metadata('csv').then( function(data) {
-    var hstr = '<pre>' + data.join('') + '</pre>';
-    var window_features = 'toolbar=no,menubar=no,location=no,resizable=yes,scrollbars=yes,status=no';
-    window_features += ',width=800,height=600';
-    var annotation_data_window = window.open('', 'Annotations (preview) ', window_features);
-    annotation_data_window.document.body.innerHTML = hstr;
-  }.bind(this), function(err) {
-    show_message('Failed to collect annotation data!');
-  }.bind(this));
 }
 
 //
@@ -3261,7 +3245,7 @@ function _via_update_ui_components() {
       _via_show_img(_via_image_index);
 
       if (_via_is_canvas_zoomed) {
-        reset_zoom_level();
+        reset_zoom_level();keydown_event
       }
     }
     break;
