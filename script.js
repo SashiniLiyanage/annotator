@@ -49,57 +49,7 @@ function _via_load_submodules() {
   /******************************************************************************************************************************/
 
 
-
   
-/*
-  VGG Image Annotator (via)
-  www.robots.ox.ac.uk/~vgg/software/via/
-
-  Copyright (c) 2016-2019, Abhishek Dutta, Visual Geometry Group, Oxford University and VIA Contributors.
-  All rights reserved.
-
-  Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions are met:
-
-  Redistributions of source code must retain the above copyright notice, this
-  list of conditions and the following disclaimer.
-  Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-  POSSIBILITY OF SUCH DAMAGE.
-*/
-
-/*
-  Links:
-  - https://gitlab.com/vgg/via/blob/master/Contributors.md : list of developers who have contributed code to the VIA project.
-  - https://gitlab.com/vgg/via/blob/master/CodeDoc.md : source code documentation
-  - https://gitlab.com/vgg/via/blob/master/CONTRIBUTING.md : guide for contributors
-
-  This source code can be grouped into the following categories:
-  - Data structure for annotations
-  - Initialization routine
-  - Handlers for top navigation bar
-  - Local file uploaders
-  - Data Importer
-  - Data Exporter
-  - Maintainers of user interface
-  - Image click handlers
-  - Canvas update routines
-  - Region collision routines
-  - Shortcut key handlers
-  - Persistence of annotation data in browser cache (i.e. localStorage)
-  - Handlers for attributes input panel (spreadsheet like user input panel)
-*/
 
 "use strict";
 
@@ -462,15 +412,6 @@ function show_single_image_view() {
 //
 // Handlers for top navigation bar
 //
-function sel_local_images() {
-  // source: https://developer.mozilla.org/en-US/docs/Using_files_from_web_applications
-  if (invisible_file_input) {
-    invisible_file_input.setAttribute('multiple', 'multiple');
-    invisible_file_input.accept   = '.jpg,.jpeg,.png,.bmp';
-    invisible_file_input.onchange = project_file_add_local;
-    invisible_file_input.click();
-  }
-}
 
 // invoked by menu-item buttons in HTML UI
 function download_all_region_data(type, file_extension) {
@@ -498,37 +439,20 @@ function download_all_region_data(type, file_extension) {
   }.bind(this));
 }
 
-function sel_local_data_file(type) {
-  if (invisible_file_input) {
-    switch(type) {
-    case 'annotations':
-      invisible_file_input.accept='.csv,.json';
-      invisible_file_input.onchange = import_annotations_from_file;
-      break;
+function save_data_to_local_file(data, filename) {
+  var a      = document.createElement('a');
+  a.href     = URL.createObjectURL(data);
+  a.download = filename;
 
-    case 'annotations_coco':
-      invisible_file_input.accept='.json';
-      invisible_file_input.onchange = load_coco_annotations_json_file;
-      break;
-
-    case 'files_url':
-      invisible_file_input.accept='';
-      invisible_file_input.onchange = import_files_url_from_file;
-      break;
-
-    case 'attributes':
-      invisible_file_input.accept='json';
-      invisible_file_input.onchange = project_import_attributes_from_file;
-      break;
-
-    default:
-      console.log('sel_local_data_file() : unknown type ' + type);
-      return;
-    }
-    invisible_file_input.removeAttribute('multiple');
-    invisible_file_input.click();
-  }
+  // simulate a mouse click event
+  var event = new MouseEvent('click', {
+    view: window,
+    bubbles: true,
+    cancelable: true
+  });
+  a.dispatchEvent(event);
 }
+
 
 //
 // Data Importer
@@ -540,172 +464,6 @@ function import_files_url_from_file(event) {
     file = selected_files[i];
     load_text_file(file, import_files_url_from_csv);
   }
-}
-
-function import_annotations_from_file(event) {
-  var selected_files = event.target.files;
-  var i, file;
-  for ( i = 0; i < selected_files.length; ++i ) {
-    file = selected_files[i];
-    switch ( file.type ) {
-    case '': // Fall-through // Windows 10: Firefox and Chrome do not report filetype
-      show_message('File type for ' + file.name + ' cannot be determined! Assuming text/plain.');
-    case 'text/plain': // Fall-through
-    case 'application/vnd.ms-excel': // Fall-through // @todo: filetype of VIA csv annotations in Windows 10 , fix this (reported by @Eli Walker)
-    case 'text/csv':
-      load_text_file(file, import_annotations_from_csv);
-      break;
-
-    case 'text/json': // Fall-through
-    case 'application/json':
-      load_text_file(file, import_annotations_from_json);
-      break;
-
-    default:
-      show_message('Annotations cannot be imported from file of type ' + file.type);
-      break;
-    }
-  }
-}
-
-function load_coco_annotations_json_file(event) {
-  load_text_file(event.target.files[0], import_coco_annotations_from_json);
-}
-
-function import_annotations_from_csv(data) {
-  return new Promise( function(ok_callback, err_callback) {
-    if ( data === '' || typeof(data) === 'undefined') {
-      err_callback();
-    }
-
-    var region_import_count = 0;
-    var malformed_csv_lines_count = 0;
-    var file_added_count = 0;
-
-    var line_split_regex = new RegExp('\n|\r|\r\n', 'g');
-    var csvdata = data.split(line_split_regex);
-
-    var parsed_header = parse_csv_header_line(csvdata[0]);
-    if ( ! parsed_header.is_header ) {
-      show_message('Header line missing in the CSV file');
-      err_callback();
-      return;
-    }
-
-    var n = csvdata.length;
-    var i;
-    var first_img_id = '';
-    for ( i = 1; i < n; ++i ) {
-      // ignore blank lines
-      if (csvdata[i].charAt(0) === '\n' || csvdata[i].charAt(0) === '') {
-        continue;
-      }
-
-      var d = parse_csv_line(csvdata[i]);
-
-      // check if csv line was malformed
-      if ( d.length !== parsed_header.csv_column_count ) {
-        malformed_csv_lines_count += 1;
-        continue;
-      }
-
-      var filename = d[parsed_header.filename_index];
-      var size     = d[parsed_header.size_index];
-      var img_id   = _via_get_image_id(filename, size);
-
-      // check if file is already present in this project
-      if ( ! _via_img_metadata.hasOwnProperty(img_id) ) {
-        img_id = project_add_new_file(filename, size);
-        if ( _via_settings.core.default_filepath === '' ) {
-          _via_img_src[img_id] = filename;
-        } else {
-          _via_file_resolve_file_to_default_filepath(img_id);
-        }
-        file_added_count += 1;
-
-        if ( first_img_id === '' ) {
-          first_img_id = img_id;
-        }
-      }
-
-      // copy file attributes
-      if ( d[parsed_header.file_attr_index] !== '"{}"') {
-        var fattr = d[parsed_header.file_attr_index];
-        fattr     = remove_prefix_suffix_quotes( fattr );
-        fattr     = unescape_from_csv( fattr );
-
-        var m = json_str_to_map( fattr );
-        for( var key in m ) {
-          _via_img_metadata[img_id].file_attributes[key] = m[key];
-
-          // add this file attribute to _via_attributes
-          if ( ! _via_attributes['file'].hasOwnProperty(key) ) {
-            _via_attributes['file'][key] = { 'type':'text' };
-          }
-        }
-      }
-
-      var region_i = new file_region();
-      // copy regions shape attributes
-      if ( d[parsed_header.region_shape_attr_index] !== '"{}"' ) {
-        var sattr = d[parsed_header.region_shape_attr_index];
-        sattr     = remove_prefix_suffix_quotes( sattr );
-        sattr     = unescape_from_csv( sattr );
-
-        var m = json_str_to_map( sattr );
-        for ( var key in m ) {
-          region_i.shape_attributes[key] = m[key];
-        }
-      }
-
-      // copy region attributes
-      if ( d[parsed_header.region_attr_index] !== '"{}"' ) {
-        var rattr = d[parsed_header.region_attr_index];
-        rattr     = remove_prefix_suffix_quotes( rattr );
-        rattr     = unescape_from_csv( rattr );
-
-        var m = json_str_to_map( rattr );
-        for ( var key in m ) {
-          region_i.region_attributes[key] = m[key];
-
-          // add this region attribute to _via_attributes
-          if ( ! _via_attributes['region'].hasOwnProperty(key) ) {
-            _via_attributes['region'][key] = { 'type':'text' };
-          }
-        }
-      }
-
-      // add regions only if they are present
-      if (Object.keys(region_i.shape_attributes).length > 0 ||
-          Object.keys(region_i.region_attributes).length > 0 ) {
-        _via_img_metadata[img_id].regions.push(region_i);
-        region_import_count += 1;
-      }
-    }
-    show_message('Import Summary : [' + file_added_count + '] new files, ' +
-                 '[' + region_import_count + '] regions, ' +
-                 '[' + malformed_csv_lines_count  + '] malformed csv lines.');
-
-    if ( file_added_count ) {
-      update_img_fn_list();
-    }
-
-    if ( _via_current_image_loaded ) {
-      if ( region_import_count ) {
-        update_attributes_update_panel();
-        annotation_editor_update_content();
-        _via_load_canvas_regions(); // image to canvas space transform
-        _via_redraw_reg_canvas();
-        _via_reg_canvas.focus();
-      }
-    } else {
-      if ( file_added_count ) {
-        var first_img_index = _via_image_id_list.indexOf(first_img_id);
-        _via_show_img( first_img_index );
-      }
-    }
-    ok_callback([file_added_count, region_import_count, malformed_csv_lines_count]);
-  });
 }
 
 function parse_csv_header_line(line) {
@@ -724,147 +482,6 @@ function parse_csv_header_line(line) {
   } else {
     return { 'is_header':false };
   }
-}
-
-// see http://cocodataset.org/#format-data
-function import_coco_annotations_from_json(data_str) {
-  return new Promise( function(ok_callback, err_callback) {
-    if (data_str === '' || typeof(data_str) === 'undefined') {
-      show_message('Empty file');
-      return;
-    }
-    var coco = JSON.parse(data_str);
-    if( !coco.hasOwnProperty('info') ||
-        !coco.hasOwnProperty('categories') ||
-        !coco.hasOwnProperty('annotations') ||
-        !coco.hasOwnProperty('images') ) {
-      show_message('File does not contain valid annotations in COCO format.');
-      return;
-    }
-
-    // create _via_attributes from coco['categories']
-    var category_id_to_attribute_name = {};
-    for( var i in coco['categories'] ) {
-      var sc    = coco['categories'][i]['supercategory'];
-      var cid   = coco['categories'][i]['id'];
-      var cname = coco['categories'][i]['name'];
-      if( !_via_attributes['region'].hasOwnProperty(sc)) {
-        _via_attributes['region'][sc] = {'type':VIA_ATTRIBUTE_TYPE.RADIO,
-                                         'description':'coco["categories"][' + i + ']=' + JSON.stringify(coco['categories'][i]),
-                                         'options':{},
-                                         'default_options':{}
-                                        };
-      }
-      _via_attributes['region'][sc]['options'][cid] = cname;
-      category_id_to_attribute_name[cid] = sc;
-    }
-    // if more than 5 options, convert the attribute type to DROPDOWN
-    for( var attr_name in _via_attributes['region'] ) {
-      if( Object.keys(_via_attributes['region'][attr_name]['options']).length > 5 ) {
-        _via_attributes['region'][attr_name]['type'] = VIA_ATTRIBUTE_TYPE.DROPDOWN;
-      }
-    }
-
-    // create an map of image_id and their annotations
-    var image_id_to_annotation_index = {};
-    for ( var annotation_index in coco['annotations'] ) {
-      var coco_image_id = coco.annotations[annotation_index]['image_id'];
-      if ( !image_id_to_annotation_index.hasOwnProperty(coco_image_id) ) {
-        image_id_to_annotation_index[coco_image_id] = [];
-      }
-      image_id_to_annotation_index[coco_image_id].push( annotation_index );
-    }
-
-    // add all files and annotations
-    _via_img_metadata = {};
-    _via_image_id_list = [];
-    _via_image_filename_list = [];
-    _via_img_count = 0;
-    var imported_file_count = 0;
-    var imported_region_count = 0;
-    for ( var coco_img_index in coco['images'] ) {
-      var coco_img_id = coco['images'][coco_img_index]['id'];
-      var filename;
-      if ( coco.images[coco_img_index].hasOwnProperty('coco_url') &&
-           coco.images[coco_img_index]['coco_url'] !== "") {
-        filename = coco.images[coco_img_index]['coco_url'];
-      } else {
-        filename = coco.images[coco_img_index]['file_name'];
-      }
-      _via_img_metadata[coco_img_id] = { 'filename':filename,
-                                         'size'    :-1,
-                                         'regions' :[],
-                                         'file_attributes': {
-                                           'width' :coco.images[coco_img_index]['width'],
-                                           'height':coco.images[coco_img_index]['height']
-                                         },
-                                       };
-      _via_image_id_list.push(coco_img_id);
-      _via_image_filename_list.push(filename);
-      _via_img_count = _via_img_count + 1;
-
-      // add all annotations associated with this file
-      if ( image_id_to_annotation_index.hasOwnProperty(coco_img_id) ) {
-        for ( var i in image_id_to_annotation_index[coco_img_id] ) {
-          var annotation_i = coco['annotations'][ image_id_to_annotation_index[coco_img_id][i] ];
-          var bbox_from_polygon = polygon_to_bbox(annotation_i['segmentation'][0]);
-
-          // ensure rectangles get imported as rectangle (and not as polygon)
-          var is_rectangle = true;
-          for (var j = 0; j < annotation_i['bbox'].length; ++j) {
-            if (annotation_i['bbox'][j] !== bbox_from_polygon[j]) {
-              is_rectangle = false;
-              break;
-            }
-          }
-
-          var region_i = { 'shape_attributes': {}, 'region_attributes': {} };
-          var attribute_name = category_id_to_attribute_name[ annotation_i['category_id'] ];
-          var attribute_value = annotation_i['category_id'].toString();
-          region_i['region_attributes'][attribute_name] = attribute_value;
-
-          if ( annotation_i['segmentation'][0].length === 8 && is_rectangle ) {
-            region_i['shape_attributes'] = { 'name':'rect',
-                                             'x': annotation_i['bbox'][0],
-                                             'y': annotation_i['bbox'][1],
-                                             'width': annotation_i['bbox'][2],
-                                             'height': annotation_i['bbox'][3]};
-          } else {
-            region_i['shape_attributes'] = { 'name':'polygon',
-                                             'all_points_x':[],
-                                             'all_points_y':[]};
-            for ( var j = 0; j < annotation_i['segmentation'][0].length; j = j + 2 ) {
-              region_i['shape_attributes']['all_points_x'].push( annotation_i['segmentation'][0][j] );
-              region_i['shape_attributes']['all_points_y'].push( annotation_i['segmentation'][0][j+1] );
-            }
-          }
-          _via_img_metadata[coco_img_id]['regions'].push(region_i);
-          imported_region_count = imported_region_count + 1;
-        }
-      }
-    }
-    show_message('Import Summary : [' + _via_img_count + '] new files, ' +
-                 '[' + imported_region_count + '] regions.');
-
-    if(_via_img_count) {
-      update_img_fn_list();
-    }
-
-    if(_via_current_image_loaded) {
-      if(imported_region_count) {
-        update_attributes_update_panel();
-        annotation_editor_update_content();
-        _via_load_canvas_regions(); // image to canvas space transform
-        _via_redraw_reg_canvas();
-        _via_reg_canvas.focus();
-      }
-    } else {
-      if(_via_img_count) {
-        _via_show_img(0);
-      }
-    }
-    ok_callback([_via_img_count, imported_region_count, 0]);
-  });
 }
 
 function import_annotations_from_json(data_str) {
@@ -1431,23 +1048,6 @@ function via_region_shape_to_coco_annotation(shape_attributes) {
   return annotation;
 }
 
-function save_data_to_local_file(data, filename) {
-  var a      = document.createElement('a');
-  a.href     = URL.createObjectURL(data);
-  a.download = filename;
-
-  // simulate a mouse click event
-  var event = new MouseEvent('click', {
-    view: window,
-    bubbles: true,
-    cancelable: true
-  });
-  a.dispatchEvent(event);
-
-  // @todo: replace a.dispatchEvent() with a.click()
-  // a.click() based trigger is supported in Chrome 70 and Safari 11/12 but **not** in Firefox 63
-  //a.click();
-}
 
 //
 // Maintainers of user interface
@@ -6514,71 +6114,6 @@ function project_get_default_project_name() {
   return project_name;
 }
 
-function project_file_remove_with_confirm() {
-  var img_id = _via_image_id_list[_via_image_index];
-  var filename = _via_img_metadata[img_id].filename;
-  var region_count = _via_img_metadata[img_id].regions.length;
-
-  var config = {'title':'Remove File from Project' };
-  var input = { 'img_index': { type:'text', name:'File Id', value:(_via_image_index+1), disabled:true, size:8 },
-                'filename':{ type:'text', name:'Filename', value:filename, disabled:true, size:30},
-                'region_count':{ type:'text', name:'Number of regions', disabled:true, value:region_count, size:8}
-              };
-
-  invoke_with_user_inputs(project_file_remove_confirmed, input, config);
-}
-
-function project_file_remove_confirmed(input) {
-  var img_index = input.img_index.value - 1;
-  project_remove_file(img_index);
-
-  if ( img_index === _via_img_count ) {
-    if ( _via_img_count === 0 ) {
-      _via_current_image_loaded = false;
-      show_home_panel();
-    } else {
-      _via_show_img(img_index - 1);
-    }
-  } else {
-    _via_show_img(img_index);
-  }
-  _via_reload_img_fn_list_table = true;
-  update_img_fn_list();
-  show_message('Removed file [' + input.filename.value + '] from project');
-  user_input_default_cancel_handler();
-}
-
-
-function project_remove_file(img_index) {
-  if ( img_index < 0 || img_index >= _via_img_count ) {
-    console.log('project_remove_file(): invalid img_index ' + img_index);
-    return;
-  }
-  var img_id = _via_image_id_list[img_index];
-
-  // remove img_index from all array
-  // this invalidates all image_index > img_index
-  _via_image_id_list.splice( img_index, 1 );
-  _via_image_filename_list.splice( img_index, 1 );
-
-  var img_fn_list_index = _via_img_fn_list_img_index_list.indexOf(img_index);
-  if ( img_fn_list_index !== -1 ) {
-    _via_img_fn_list_img_index_list.splice( img_fn_list_index, 1 );
-  }
-
-  // clear all buffer
-  // @todo: it is wasteful to clear all the buffer instead of removing a single image
-  _via_buffer_remove_all();
-  img_fn_list_clear_css_classname('buffered');
-
-  _via_clear_reg_canvas();
-  delete _via_img_metadata[img_id];
-  delete _via_img_src[img_id];
-  delete _via_img_fileref[img_id];
-
-  _via_img_count -= 1;
-}
-
 function project_add_new_file(filename, size, file_id) {
   var img_id = file_id;
   if ( typeof(img_id) === 'undefined' ) {
@@ -6595,55 +6130,6 @@ function project_add_new_file(filename, size, file_id) {
     _via_img_count += 1;
   }
   return img_id;
-}
-
-function project_file_add_local(event) {
-  var user_selected_images = event.target.files;
-  var original_image_count = _via_img_count;
-
-  var new_img_index_list = [];
-  var discarded_file_count = 0;
-  for ( var i = 0; i < user_selected_images.length; ++i ) {
-    var filetype = user_selected_images[i].type.substr(0, 5);
-    if ( filetype === 'image' ) {
-      // check which filename in project matches the user selected file
-      var img_index = _via_image_filename_list.indexOf(user_selected_images[i].name);
-       if( img_index === -1) {
-        // a new file was added to project
-        var new_img_id = project_add_new_file(user_selected_images[i].name,
-                                              user_selected_images[i].size);
-        _via_img_fileref[new_img_id] = user_selected_images[i];
-        set_file_annotations_to_default_value(new_img_id);
-        new_img_index_list.push( _via_image_id_list.indexOf(new_img_id) );
-      } else {
-        // an existing file was resolved using browser's file selector
-        var img_id = _via_image_id_list[img_index];
-        _via_img_fileref[img_id] = user_selected_images[i];
-        _via_img_metadata[img_id]['size'] = user_selected_images[i].size;
-      }
-    } else {
-      discarded_file_count += 1;
-    }
-  }
-
-  if ( _via_img_metadata ) {
-    var status_msg = 'Loaded ' + new_img_index_list.length + ' images.';
-    if ( discarded_file_count ) {
-      status_msg += ' ( Discarded ' + discarded_file_count + ' non-image files! )';
-    }
-    show_message(status_msg);
-
-    if ( new_img_index_list.length ) {
-      // show first of newly added image
-      _via_show_img( new_img_index_list[0] );
-    } else {
-      // show original image
-      _via_show_img ( _via_image_index );
-    }
-    update_img_fn_list();
-  } else {
-    show_message("Please upload some image files!");
-  }
 }
 
 function project_file_add_abs_path_with_input() {
@@ -6668,32 +6154,6 @@ function project_file_add_abs_path_input_done(input) {
     if ( input.absolute_path_list.value !== '' ) {
       var absolute_path_list_str = input.absolute_path_list.value;
       import_files_url_from_csv(absolute_path_list_str);
-    }
-  }
-}
-
-function project_file_add_url_with_input() {
-  var config = {'title':'Add File using URL' };
-  var input = { 'url': { type:'text', name:'add one URL', placeholder:'http://www.robots.ox.ac.uk/~vgg/software/via/images/swan.jpg', disabled:false, size:50 },
-		'url_list': { type:'textarea', name:'or, add multiple URL (one url per line)', placeholder:'http://www.example.com/image1.jpg\nhttp://www.example.com/image2.jpg\nhttp://www.example.com/image3.png', disabled:false, rows:5, cols:80 }
-              };
-
-  invoke_with_user_inputs(project_file_add_url_input_done, input, config);
-}
-
-function project_file_add_url_input_done(input) {
-  if ( input.url.value !== '' ) {
-    var url = input.url.value.trim();
-    var img_id    = project_file_add_url(url);
-    var img_index = _via_image_id_list.indexOf(img_id);
-    show_message('Added file at url [' + url + ']');
-    update_img_fn_list();
-    _via_show_img(img_index);
-    user_input_default_cancel_handler();
-  } else {
-    if ( input.url_list.value !== '' ) {
-      var url_list_str = input.url_list.value;
-      import_files_url_from_csv(url_list_str);
     }
   }
 }
@@ -6766,13 +6226,6 @@ function project_filepath_del(path) {
   if ( _via_settings.core.filepath.hasOwnProperty(path) ) {
     delete _via_settings.core.filepath[path];
   }
-}
-
-function project_save_attributes() {
-  var blob_attr = {type: 'application/json;charset=utf-8'};
-  var all_region_data_blob = new Blob( [ JSON.stringify(_via_attributes) ], blob_attr);
-
-  save_data_to_local_file(all_region_data_blob, _via_settings.project.name + '_attributes.json');
 }
 
 function project_import_attributes_from_file(event) {
