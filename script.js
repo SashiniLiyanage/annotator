@@ -4278,25 +4278,6 @@ function paste_regions(img_index) {
   return pasted_reg_count;
 }
 
-function del_sel_regions_confirmed(input) {
-  user_input_default_cancel_handler();
-  var intersect = generate_img_index_list(input);
-  var i;
-  var total_deleted_region_count = 0;
-  for ( i = 0; i < intersect.length; i++ ) {
-    total_deleted_region_count += delete_regions( intersect[i] );
-  }
-
-  show_message('Deleted [' + total_deleted_region_count + '] regions ' +
-               'in ' + intersect.length + ' images');
-
-  if ( intersect.includes(_via_image_index) ) {
-    _via_load_canvas_regions();
-    _via_redraw_reg_canvas();
-    _via_reg_canvas.focus();
-  }
-}
-
 function delete_regions(img_index) {
   var del_region_count = 0;
   if ( _via_copied_image_regions.length ) {
@@ -5557,79 +5538,6 @@ function attribute_property_id_exists(name) {
   return false;
 }
 
-function delete_existing_attribute_with_confirm() {
-  var attr_id = document.getElementById('user_input_attribute_id').value;
-  if ( attr_id === '' ) {
-    show_message('Enter the name of attribute that you wish to delete');
-    return;
-  }
-  if ( attribute_property_id_exists(attr_id) ) {
-    var config = {'title':'Delete ' + _via_attribute_being_updated + ' attribute [' + attr_id + ']',
-                  'warning': 'Warning: Deleting an attribute will lead to the attribute being deleted in all the annotations. Please click OK only if you are sure.'};
-    var input = { 'attr_type':{'type':'text', 'name':'Attribute Type', 'value':_via_attribute_being_updated, 'disabled':true},
-                  'attr_id':{'type':'text', 'name':'Attribute Id', 'value':attr_id, 'disabled':true}
-                };
-    invoke_with_user_inputs(delete_existing_attribute_confirmed, input, config);
-  } else {
-    show_message('Attribute [' + attr_id + '] does not exist!');
-    return;
-  }
-}
-
-function delete_existing_attribute_confirmed(input) {
-  var attr_type = input.attr_type.value;
-  var attr_id   = input.attr_id.value;
-  delete_existing_attribute(attr_type, attr_id);
-  document.getElementById('user_input_attribute_id').value = '';
-  show_message('Deleted ' + attr_type + ' attribute [' + attr_id + ']');
-  user_input_default_cancel_handler();
-}
-
-function delete_existing_attribute(attribute_type, attr_id) {
-  if ( _via_attributes[attribute_type].hasOwnProperty( attr_id ) ) {
-    var attr_id_list = Object.keys(_via_attributes[attribute_type]);
-    if ( attr_id_list.length === 1 ) {
-      _via_current_attribute_id = '';
-    } else {
-      var current_index = attr_id_list.indexOf(attr_id);
-      var next_index = current_index + 1;
-      if ( next_index === attr_id_list.length ) {
-        next_index = current_index - 1;
-      }
-      _via_current_attribute_id = attr_id_list[next_index];
-    }
-    delete _via_attributes[attribute_type][attr_id];
-    delete_region_attribute_in_all_metadata(attr_id);
-    update_attributes_update_panel();
-    annotation_editor_update_content();
-  }
-}
-
-function add_new_attribute_from_user_input() {
-  var attr_id = document.getElementById('user_input_attribute_id').value;
-  if ( attr_id === '' ) {
-    show_message('Enter the name of attribute that you wish to delete');
-    return;
-  }
-
-  if ( attribute_property_id_exists(attr_id) ) {
-    show_message('The ' + _via_attribute_being_updated + ' attribute [' + attr_id + '] already exists.');
-  } else {
-    _via_current_attribute_id = attr_id;
-    add_new_attribute(attr_id);
-    update_attributes_update_panel();
-    annotation_editor_update_content();
-    show_message('Added ' + _via_attribute_being_updated + ' attribute [' + attr_id + '].');
-  }
-}
-
-function add_new_attribute(attribute_id) {
-  _via_attributes[_via_attribute_being_updated][attribute_id] = {};
-  _via_attributes[_via_attribute_being_updated][attribute_id].type = 'text';
-  _via_attributes[_via_attribute_being_updated][attribute_id].description = '';
-  _via_attributes[_via_attribute_being_updated][attribute_id].default_value = '';
-}
-
 function update_current_attribute_id(p) {
   _via_current_attribute_id = p.options[p.selectedIndex].value;
   update_attribute_properties_panel();
@@ -5744,46 +5652,6 @@ function update_region_attribute_option_in_all_metadata(is_delete, attr_id, opti
                                 Object.getOwnPropertyDescriptor(_via_img_metadata[image_id].regions[i].region_attributes[attr_id], option_id));
           delete _via_img_metadata[image_id].regions[i].region_attributes[attr_id][option_id];
         }
-      }
-    }
-  }
-}
-
-function delete_region_attribute_in_all_metadata(attr_id) {
-  var image_id;
-  for ( image_id in _via_img_metadata ) {
-    for (var i = 0; i < _via_img_metadata[image_id].regions.length; ++i ) {
-      if ( _via_img_metadata[image_id].regions[i].region_attributes.hasOwnProperty(attr_id)) {
-        delete _via_img_metadata[image_id].regions[i].region_attributes[attr_id];
-      }
-    }
-  }
-}
-
-function delete_file_attribute_option_from_all_metadata(attr_id, option_id) {
-  var image_id;
-  for ( image_id in _via_img_metadata ) {
-    if ( _via_img_metadata.hasOwnProperty(image_id) ) {
-      delete_file_attribute_option_from_metadata(image_id, attr_id, option_id);
-    }
-  }
-}
-
-function delete_file_attribute_option_from_metadata(image_id, attr_id, option_id) {
-  var i;
-  if ( _via_img_metadata[image_id].file_attributes.hasOwnProperty(attr_id) ) {
-    if ( _via_img_metadata[image_id].file_attributes[attr_id].hasOwnProperty(option_id) ) {
-      delete _via_img_metadata[image_id].file_attributes[attr_id][option_id];
-    }
-  }
-}
-
-function delete_file_attribute_from_all_metadata(image_id, attr_id) {
-  var image_id;
-  for ( image_id in _via_img_metadata ) {
-    if ( _via_img_metadata.hasOwnProperty(image_id) ) {
-      if ( _via_img_metadata[image_id].file_attributes.hasOwnProperty(attr_id) ) {
-        delete _via_img_metadata[image_id].file_attributes[attr_id];
       }
     }
   }
