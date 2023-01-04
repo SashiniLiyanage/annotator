@@ -144,10 +144,6 @@
         <span class="text_button" onclick="edit_file_metadata_in_annotation_editor()" id="button_edit_file_metadata" title="Manual annotations of a file">File Annotations</span>
 
         <span class="button" style="float:right;margin-right:0.2rem;" onclick="annotation_editor_toggle_all_regions_editor()" title="Close this window of annotation editor">&times;</span>
-        <span class="button" style="float:right;margin-right:0.2rem;" onclick="annotation_editor_increase_panel_height()" title="Increase the height of this panel">&uarr;</span>
-        <span class="button" style="float:right;margin-right:0.2rem;" onclick="annotation_editor_decrease_panel_height()" title="Decrease the height of this panel">&darr;</span>
-        <span class="button" style="float:right;margin-right:0.2rem;" onclick="annotation_editor_increase_content_size()" title="Increase size of contents in annotation editor">&plus;</span>
-        <span class="button" style="float:right;margin-right:0.2rem;" onclick="annotation_editor_decrease_content_size()" title="Decrease size of contents in annotation editor">&minus;</span>
       </div>
       <!-- here, a child div with id="annotation_editor" is added by javascript -->
     </div>
@@ -185,12 +181,6 @@
 
               <li class="submenu_divider"></li>
               <li onclick="show_annotation_data()" title="Show a preview of annotations (opens in a new browser windows)">Preview Annotations</li>
-            </ul>
-          </li>
-
-          <li>Help
-            <ul>
-              <li onclick="set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_LICENSE)" title="View license of this application">License</li>
             </ul>
           </li>
         </ul>
@@ -274,9 +264,6 @@
             </div>
             <div id="attribute_properties"></div>
             <div id="attribute_options"></div>
-            <p style="text-align:center">
-              <span class="text_button" title="Show a spreadsheet like editor for all manual annotations" onclick="annotation_editor_toggle_all_regions_editor()">Toggle Annotation Editor</span>
-            </p>
           </div>
         </div>
 
@@ -529,39 +516,7 @@
         </div> <!-- end of file not found panel -->
 
         <div id="page_start_info" class="display_area_content display_none narrow_page_content">
-          <ul>
-            <li>To start annotation, <span class="text_button" title="Load or Add Images" onclick="sel_local_images()">select images</span> (or, add images from <span class="text_button" title="Add images from a web URL (e.g. http://www.robots.ox.ac.uk/~vgg/software/via/images/swan.jpg)" onclick="project_file_add_url_with_input()">URL</span> or <span class="text_button" title="Add images using absolute path of file (e.g. /home/abhishek/image1.jpg)" onclick="project_file_add_abs_path_with_input()">absolute path</span>) and draw regions</li>
-            <li>Use <span class="text_button" title="Toggle attributes editor panel" onclick="toggle_attributes_editor()">attribute editor</span> to define attributes (e.g. name) and <span class="text_button" title="Toggle annotations editor panel" onclick="annotation_editor_toggle_all_regions_editor()">annotation editor</span> to describe each region (e.g. cat) using these attributes.</li>
-            <li>Remember to <span class="text_button" onclick="project_save_with_confirm()">save</span> your project before closing this application so that you can <span class="text_button" onclick="project_open_select_project_file()">load</span> it later to continue annotation.</li>
-          </ul>
-
-        </div>
-
-        <div id="page_license" class="display_area_content display_none narrow_page_content">
-          <pre>
-Copyright (c) 2016-2022, Abhishek Dutta, Visual Geometry Group, Oxford University and VIA Contributors.
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-Redistributions of source code must retain the above copyright notice, this
-list of conditions and the following disclaimer.
-Redistributions in binary form must reproduce the above copyright notice,
-this list of conditions and the following disclaimer in the documentation
-and/or other materials provided with the distribution.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS &quot;AS IS&quot;
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
-          </pre>
+          annotaiton tool
         </div>
       </div> <!-- end of display_area -->
     </div> <!-- end of middle_panel -->

@@ -125,8 +125,7 @@ var VIA_DISPLAY_AREA_CONTENT_NAME = {IMAGE:'image_panel',
                                      IMAGE_GRID:'image_grid_panel',
                                      SETTINGS:'settings_panel',
                                      PAGE_404:'page_404',
-                                     PAGE_START_INFO:'page_start_info',
-                                     PAGE_LICENSE:'page_license'
+                                     PAGE_START_INFO:'page_start_info'
                                     };
 
 var VIA_ANNOTATION_EDITOR_MODE    = {SINGLE_REGION:'single_region',
@@ -6791,38 +6790,6 @@ function set_file_annotations_to_default_value(image_id) {
       }
       break;
     }
-  }
-}
-
-function annotation_editor_increase_panel_height() {
-  var p = document.getElementById('annotation_editor_panel');
-  if ( _via_settings.ui.annotation_editor_height < 95 ) {
-    _via_settings.ui.annotation_editor_height += VIA_ANNOTATION_EDITOR_HEIGHT_CHANGE;
-    p.style.height = _via_settings.ui.annotation_editor_height + '%';
-  }
-}
-
-function annotation_editor_decrease_panel_height() {
-  var p = document.getElementById('annotation_editor_panel');
-  if ( _via_settings.ui.annotation_editor_height > 10 ) {
-    _via_settings.ui.annotation_editor_height -= VIA_ANNOTATION_EDITOR_HEIGHT_CHANGE;
-    p.style.height = _via_settings.ui.annotation_editor_height + '%';
-  }
-}
-
-function annotation_editor_increase_content_size() {
-  var p = document.getElementById('annotation_editor_panel');
-  if ( _via_settings.ui.annotation_editor_fontsize < 1.6 ) {
-    _via_settings.ui.annotation_editor_fontsize += VIA_ANNOTATION_EDITOR_FONTSIZE_CHANGE;
-    p.style.fontSize = _via_settings.ui.annotation_editor_fontsize + 'rem';
-  }
-}
-
-function annotation_editor_decrease_content_size() {
-  var p = document.getElementById('annotation_editor_panel');
-  if ( _via_settings.ui.annotation_editor_fontsize > 0.4 ) {
-    _via_settings.ui.annotation_editor_fontsize -= VIA_ANNOTATION_EDITOR_FONTSIZE_CHANGE;
-    p.style.fontSize = _via_settings.ui.annotation_editor_fontsize + 'rem';
   }
 }
 
