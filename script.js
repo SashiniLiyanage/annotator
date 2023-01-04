@@ -24,13 +24,13 @@ function _via_load_submodules() {
   }
   
   function _via_basic_demo_define_attributes() {
-    var attributes_json = '{"region":{"name":{"type":"text","description":"Name of the object","default_value":"not_defined"},"type":{"type":"dropdown","description":"Category of object","options":{"bird":"Bird","human":"Human","cup":"Cup (object)","unknown":"Unknown (object)"},"default_options":{"unknown":true}},"image_quality":{"type":"checkbox","description":"Quality of image region","options":{"blur":"Blurred region","good_illumination":"Good Illumination","frontal":"Object in Frontal View"},"default_options":{"good":true,"frontal":true,"good_illumination":true}}},"file":{"caption":{"type":"text","description":"","default_value":""},"public_domain":{"type":"radio","description":"","options":{"yes":"Yes","no":"No"},"default_options":{"no":true}},"image_url":{"type":"text","description":"","default_value":""}}}';
+    var attributes_json = '{"region":{"type":{"type":"dropdown","description":"Category of object","options":{"bird":"Bird","human":"Human","cup":"Cup (object)","unknown":"Unknown (object)"},"default_options":{"unknown":true}},"image_quality":{"type":"checkbox","description":"Quality of image region","options":{"blur":"Blurred region","good_illumination":"Good Illumination","frontal":"Object in Frontal View"},"default_options":{"good":true,"frontal":true,"good_illumination":true}}},"file":{"caption":{"type":"text","description":"","default_value":""},"public_domain":{"type":"radio","description":"","options":{"yes":"Yes","no":"No"},"default_options":{"no":true}},"image_url":{"type":"text","description":"","default_value":""}}}';
   
     project_import_attributes_from_json(attributes_json);
   }
   
   function _via_basic_demo_define_annotations() {
-    var annotations_json = '{"adutta_swan.jpg-1":{"filename":"adutta_swan.jpg","size":-1,"regions":[{"shape_attributes":{"name":"polygon","all_points_x":[116,94,176,343,383,385,369,406,398,364,310,297,304,244,158],"all_points_y":[157,195,264,273,261,234,222,216,155,124,135,170,188,170,175]},"region_attributes":{"name":"Swan","type":"bird","image_quality":{"good_illumination":true}}}],"file_attributes":{"caption":"Swan in lake Geneve","public_domain":"no","image_url":"http://www.robots.ox.ac.uk/~vgg/software/via/images/swan.jpg"}},"wikimedia_death_of_socrates.jpg-1":{"filename":"wikimedia_death_of_socrates.jpg","size":-1,"regions":[{"shape_attributes":{"name":"rect","x":174,"y":139,"width":108,"height":227},"region_attributes":{"name":"Plato","type":"human","image_quality":{"good_illumination":true}}},{"shape_attributes":{"name":"rect","x":347,"y":114,"width":91,"height":209},"region_attributes":{"name":"Socrates","type":"human","image_quality":{"frontal":true,"good_illumination":true}}},{"shape_attributes":{"name":"ellipse","cx":316,"cy":180,"rx":17,"ry":12},"region_attributes":{"name":"Hemlock","type":"cup"}}],"file_attributes":{"caption":"The Death of Socrates by David","public_domain":"yes","image_url":"https://en.wikipedia.org/wiki/The_Death_of_Socrates#/media/File:David_-_The_Death_of_Socrates.jpg"}}}';
+    var annotations_json = '{"adutta_swan.jpg-1":{"filename":"adutta_swan.jpg","size":-1,"regions":[{"shape_attributes":{"name":"polygon","all_points_x":[116,94,176,343,383,385,369,406,398,364,310,297,304,244,158],"all_points_y":[157,195,264,273,261,234,222,216,155,124,135,170,188,170,175]},"region_attributes":{"type":"bird","image_quality":{"good_illumination":true}}}],"file_attributes":{"caption":"Swan in lake Geneve","public_domain":"no","image_url":"http://www.robots.ox.ac.uk/~vgg/software/via/images/swan.jpg"}},"wikimedia_death_of_socrates.jpg-1":{"filename":"wikimedia_death_of_socrates.jpg","size":-1,"regions":[{"shape_attributes":{"name":"rect","x":174,"y":139,"width":108,"height":227},"region_attributes":{"type":"human","image_quality":{"good_illumination":true}}},{"shape_attributes":{"name":"rect","x":347,"y":114,"width":91,"height":209},"region_attributes":{"type":"human","image_quality":{"frontal":true,"good_illumination":true}}},{"shape_attributes":{"name":"ellipse","cx":316,"cy":180,"rx":17,"ry":12},"region_attributes":{"type":"cup"}}],"file_attributes":{"caption":"The Death of Socrates by David","public_domain":"yes","image_url":"https://en.wikipedia.org/wiki/The_Death_of_Socrates#/media/File:David_-_The_Death_of_Socrates.jpg"}}}';
     
     import_annotations_from_json(annotations_json);
   }
@@ -195,7 +195,6 @@ var _via_user_input_cancel_handler = null;
 var _via_user_input_data           = {};
 
 // annotation editor
-var _via_annotaion_editor_panel     = document.getElementById('annotation_editor_panel');
 var _via_metadata_being_updated     = 'region'; // {region, file}
 var _via_annotation_editor_mode     = VIA_ANNOTATION_EDITOR_MODE.SINGLE_REGION;
 
@@ -317,7 +316,6 @@ function _via_init() {
 
   show_single_image_view();
   init_leftsidebar_accordion();
-  annotation_editor_set_active_button();
   init_message_panel();
 
   // run attached sub-modules (if any)
@@ -1219,9 +1217,6 @@ function toggle_all_regions_selection(is_selected) {
   }
   _via_is_all_region_selected = is_selected;
   annotation_editor_hide();
-  if ( _via_annotation_editor_mode === VIA_ANNOTATION_EDITOR_MODE.ALL_REGIONS ) {
-    annotation_editor_clear_row_highlight();
-  }
 }
 
 function select_only_region(region_id) {
@@ -1565,7 +1560,6 @@ function _via_reg_canvas_mouseup_handler(e) {
 
         // de-select all other regions if the user has not pressed Shift
         if ( !e.shiftKey ) {
-          annotation_editor_clear_row_highlight();
           toggle_all_regions_selection(false);
         }
         set_region_select_state(region_id, true);
@@ -1746,9 +1740,6 @@ function _via_reg_canvas_mouseup_handler(e) {
         if ( _via_annotation_editor_mode === VIA_ANNOTATION_EDITOR_MODE.ALL_REGIONS &&
              _via_metadata_being_updated === 'region' ) {
           annotation_editor_add_row( new_region_id );
-          annotation_editor_scroll_to_row( new_region_id );
-          annotation_editor_clear_row_highlight();
-          annotation_editor_highlight_row( new_region_id );
         }
         annotation_editor_show();
       }
@@ -3342,16 +3333,6 @@ function _via_handle_global_keydown_event(e) {
     e.preventDefault();
     return;
   }
-  if ( e.key === 'PageDown') {
-    jump_to_next_image_block();
-    e.preventDefault();
-    return;
-  }
-  if ( e.key === 'PageUp') {
-    jump_to_prev_image_block();
-    e.preventDefault();
-    return;
-  }
 
   if ( e.key === 'Escape' ) {
     e.preventDefault();
@@ -3389,16 +3370,6 @@ function _via_handle_global_keydown_event(e) {
     }
 
     _via_redraw_reg_canvas();
-    return;
-  }
-
-  if ( e.key === ' ' ) { // Space key
-    if ( e.ctrlKey ) {
-      annotation_editor_toggle_on_image_editor();
-    } else {
-      annotation_editor_toggle_all_regions_editor();
-    }
-    e.preventDefault();
     return;
   }
 }
@@ -3483,7 +3454,8 @@ function _via_reg_canvas_keydown_handler(e) {
       if ( e.key === 'ArrowRight' ||
            e.key === 'ArrowLeft'  ||
            e.key === 'ArrowDown'  ||
-           e.key === 'ArrowUp' ) {
+           e.key === 'ArrowUp'    || 
+           e.key === ' ') {
         var del = 1;
         if ( e.shiftKey ) {
           del = 10;
@@ -3503,6 +3475,10 @@ function _via_reg_canvas_keydown_handler(e) {
         case 'ArrowDown':
           move_y =  del;
           break;
+        case ' ':
+          if(_via_metadata_being_updated==='region') _via_metadata_being_updated = 'file'
+          else _via_metadata_being_updated = 'region'
+          annotation_editor_update_content();
         }
         _via_move_selected_regions(move_x, move_y);
         _via_redraw_reg_canvas();
@@ -3543,7 +3519,6 @@ function _via_polyshape_finish_drawing() {
     select_only_region(new_region_id); // select new region
     set_region_annotations_to_default_value( new_region_id );
     annotation_editor_add_row( new_region_id );
-    annotation_editor_scroll_to_row( new_region_id );
 
     _via_redraw_reg_canvas();
     _via_reg_canvas.focus();
@@ -3779,42 +3754,6 @@ function jump_image_block_get_count() {
   }
 
   return Math.round( n / 50 );
-}
-
-function jump_to_next_image_block() {
-  var jump_count = jump_image_block_get_count();
-  if ( jump_count > 1 ) {
-    var current_img_index = _via_image_index;
-    if ( _via_img_fn_list_img_index_list.includes( current_img_index ) ) {
-      var list_index = _via_img_fn_list_img_index_list.indexOf( current_img_index );
-      var next_list_index = list_index + jump_count;
-      if ( (next_list_index + 1) > _via_img_fn_list_img_index_list.length ) {
-        next_list_index = 0;
-      }
-      var next_img_index = _via_img_fn_list_img_index_list[next_list_index];
-      _via_show_img(next_img_index);
-    }
-  } else {
-    move_to_next_image();
-  }
-}
-
-function jump_to_prev_image_block() {
-  var jump_count = jump_image_block_get_count();
-  if ( jump_count > 1 ) {
-    var current_img_index = _via_image_index;
-    if ( _via_img_fn_list_img_index_list.includes( current_img_index ) ) {
-      var list_index = _via_img_fn_list_img_index_list.indexOf( current_img_index );
-      var prev_list_index = list_index - jump_count;
-      if ( prev_list_index < 0 ) {
-        prev_list_index = _via_img_fn_list_img_index_list.length - 1;
-      }
-      var prev_img_index = _via_img_fn_list_img_index_list[prev_list_index];
-      _via_show_img(prev_img_index);
-    }
-  } else {
-    move_to_prev_image();
-  }
 }
 
 function move_to_prev_image() {
@@ -4276,8 +4215,6 @@ function toggle_img_fn_list_visibility() {
 // items like Keyboard Shortcut hidden under the attributes panel
 function update_vertical_space() {
   var panel = document.getElementById('vertical_space');
-  var aepanel = document.getElementById('annotation_editor_panel');
-  panel.style.height = (aepanel.offsetHeight + 40) + 'px';
 }
 
 //
@@ -4336,17 +4273,6 @@ function annotation_editor_show() {
       annotation_editor_update_content();
       update_vertical_space();
     }
-  } else {
-    // show annotation editor in a separate panel at the bottom
-    _via_annotaion_editor_panel.appendChild(ae);
-    annotation_editor_update_content();
-    update_vertical_space();
-
-    if ( _via_is_region_selected ) {
-      // highlight entry for region_id in annotation editor panel
-      annotation_editor_scroll_to_row(_via_user_sel_region_id);
-      annotation_editor_highlight_row(_via_user_sel_region_id);
-    }
   }
 }
 
@@ -4354,22 +4280,6 @@ function annotation_editor_hide() {
   if ( _via_annotation_editor_mode === VIA_ANNOTATION_EDITOR_MODE.SINGLE_REGION ) {
     // remove existing annotation editor (if any)
     annotation_editor_remove();
-  } else {
-    annotation_editor_clear_row_highlight();
-  }
-}
-
-function annotation_editor_toggle_on_image_editor() {
-  if ( _via_settings.ui.image.on_image_annotation_editor_placement === VIA_ANNOTATION_EDITOR_PLACEMENT.DISABLE ) {
-    _via_annotation_editor_mode = VIA_ANNOTATION_EDITOR_MODE.SINGLE_REGION;
-    _via_settings.ui.image.on_image_annotation_editor_placement = VIA_ANNOTATION_EDITOR_PLACEMENT.NEAR_REGION;
-    annotation_editor_show();
-    show_message('Enabled on image annotation editor');
-  } else {
-    _via_settings.ui.image.on_image_annotation_editor_placement = VIA_ANNOTATION_EDITOR_PLACEMENT.DISABLE;
-    _via_annotation_editor_mode === VIA_ANNOTATION_EDITOR_MODE.ALL_REGIONS;
-    annotation_editor_hide();
-    show_message('Disabled on image annotation editor');
   }
 }
 
@@ -4427,42 +4337,12 @@ function annotation_editor_remove() {
   }
 }
 
-function is_annotation_editor_visible() {
-  return document.getElementById('annotation_editor_panel').classList.contains('display_block');
-}
-
-function annotation_editor_toggle_all_regions_editor() {
-  var p = document.getElementById('annotation_editor_panel');
-  if ( p.classList.contains('display_block') ) {
-    p.classList.remove('display_block');
-    _via_annotation_editor_mode = VIA_ANNOTATION_EDITOR_MODE.SINGLE_REGION;
-  } else {
-    _via_annotation_editor_mode = VIA_ANNOTATION_EDITOR_MODE.ALL_REGIONS;
-    p.classList.add('display_block');
-    p.style.height = _via_settings.ui.annotation_editor_height + '%';
-    p.style.fontSize = _via_settings.ui.annotation_editor_fontsize + 'rem';
-    annotation_editor_show();
-  }
-}
-
-function annotation_editor_set_active_button() {
-  var attribute_type;
-  for ( attribute_type in _via_attributes ) {
-    var bid = 'button_edit_' + attribute_type + '_metadata';
-    document.getElementById(bid).classList.remove('active');
-  }
-  var bid = 'button_edit_' + _via_metadata_being_updated + '_metadata';
-  document.getElementById(bid).classList.add('active');
-}
-
 function edit_region_metadata_in_annotation_editor() {
   _via_metadata_being_updated = 'region';
-  annotation_editor_set_active_button();
   annotation_editor_update_content();
 }
 function edit_file_metadata_in_annotation_editor() {
   _via_metadata_being_updated = 'file';
-  annotation_editor_set_active_button();
   annotation_editor_update_content();
 }
 
@@ -4542,18 +4422,7 @@ function annotation_editor_update_row(row_id) {
 }
 
 function annotation_editor_add_row(row_id) {
-  if ( is_annotation_editor_visible() ) {
-    var ae = document.getElementById('annotation_editor');
-    var new_row = annotation_editor_get_metadata_row_html(row_id);
-    var penultimate_row_id = parseInt(row_id) - 1;
-    if ( penultimate_row_id >= 0 ) {
-      var penultimate_row_html_id = 'ae_' + _via_metadata_being_updated + '_' + penultimate_row_id;
-      var penultimate_row = document.getElementById(penultimate_row_html_id);
-      ae.insertBefore(new_row, penultimate_row.nextSibling);
-    } else {
-      ae.appendChild(new_row);
-    }
-  }
+
 }
 
 function annotation_editor_get_metadata_row_html(row_id) {
@@ -4772,32 +4641,6 @@ function annotation_editor_get_metadata_row_html(row_id) {
   return row;
 }
 
-function annotation_editor_scroll_to_row(row_id) {
-  if ( is_annotation_editor_visible() ) {
-    var row_html_id = 'ae_' + _via_metadata_being_updated + '_' + row_id;
-    var row = document.getElementById(row_html_id);
-    row.scrollIntoView(false);
-  }
-}
-
-function annotation_editor_highlight_row(row_id) {
-  if ( is_annotation_editor_visible() ) {
-    var row_html_id = 'ae_' + _via_metadata_being_updated + '_' + row_id;
-    var row = document.getElementById(row_html_id);
-    row.classList.add('highlight');
-  }
-}
-
-function annotation_editor_clear_row_highlight() {
-  if ( is_annotation_editor_visible() ) {
-    var ae = document.getElementById('annotation_editor');
-    var i;
-    for ( i=0; i<ae.childNodes.length; ++i ) {
-      ae.childNodes[i].classList.remove('highlight');
-    }
-  }
-}
-
 function annotation_editor_extract_html_id_components(html_id) {
   // html_id : attribute_name__row-id__option_id
   var parts = html_id.split('__');
@@ -4893,11 +4736,8 @@ function annotation_editor_on_metadata_focus(p) {
     var region_id = pid.row_id;
     // clear existing highlights (if any)
     toggle_all_regions_selection(false);
-    annotation_editor_clear_row_highlight();
     // set new selection highlights
     set_region_select_state(region_id, true);
-    annotation_editor_scroll_to_row(region_id);
-    annotation_editor_highlight_row(region_id);
 
     _via_redraw_reg_canvas();
   }

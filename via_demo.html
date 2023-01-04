@@ -137,17 +137,6 @@
       <div id="message_panel_content" class="content"></div>
     </div>
 
-    <!-- spreadsheet like editor for annotations -->
-    <div id="annotation_editor_panel">
-      <div class="button_panel">
-        <span class="text_button" onclick="edit_region_metadata_in_annotation_editor()" id="button_edit_region_metadata" title="Manual annotations of regions">Region Annotations</span>
-        <span class="text_button" onclick="edit_file_metadata_in_annotation_editor()" id="button_edit_file_metadata" title="Manual annotations of a file">File Annotations</span>
-
-        <span class="button" style="float:right;margin-right:0.2rem;" onclick="annotation_editor_toggle_all_regions_editor()" title="Close this window of annotation editor">&times;</span>
-      </div>
-      <!-- here, a child div with id="annotation_editor" is added by javascript -->
-    </div>
-
     <div class="top_panel" id="ui_top_panel">
       <!-- menu bar -->
       <div class="menubar">
@@ -169,8 +158,6 @@
 
       <!-- Shortcut toolbar -->
       <div class="toolbar">
-        <svg onclick="annotation_editor_toggle_all_regions_editor()" viewbox="0 0 24 24"><use xlink:href="#icon_insertcomment"></use><title>Toggle Annotation Editor</title></svg>
-
         <svg onclick="zoom_in()" style="margin-left:1rem;" viewbox="0 0 24 24"><use xlink:href="#icon_zoomin"></use><title>Zoom In</title></svg>
         <svg onclick="zoom_out()" viewbox="0 0 24 24"><use xlink:href="#icon_zoomout"></use><title>Zoom Out</title></svg>
 
