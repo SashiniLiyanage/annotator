@@ -316,7 +316,6 @@ _via_settings.ui.image_grid.rshape_fill_opacity = 0.3;
 _via_settings.ui.image_grid.rshape_stroke       = 'yellow';
 _via_settings.ui.image_grid.rshape_stroke_width = 2;
 _via_settings.ui.image_grid.show_region_shape   = true;
-_via_settings.ui.image_grid.show_image_policy   = 'all';
 
 _via_settings.ui.image = {};
 _via_settings.ui.image.region_label      = '__via_region_id__'; // default: region_id
@@ -7339,16 +7338,6 @@ function image_grid_init() {
 
   image_grid_set_content_panel_height_fixed();
 
-  // select policy as defined in settings
-  var i, option;
-  var p = document.getElementById('image_grid_show_image_policy');
-  var n = p.options.length;
-  for ( i = 0; i < n; ++i ) {
-    if ( p.options[i].value === _via_settings.ui.image_grid.show_image_policy ) {
-      p.selectedIndex = i;
-      break;
-    }
-  }
 }
 
 function image_grid_update() {
@@ -7408,8 +7397,6 @@ function image_grid_set_content(img_index_list) {
   _via_image_grid_img_index_list = img_index_list.slice(0);
   _via_image_grid_selected_img_index_list = img_index_list.slice(0);
 
-  document.getElementById('image_grid_group_by_img_count').innerHTML = _via_image_grid_img_index_list.length;
-
   _via_image_grid_page_first_index    = 0;
   _via_image_grid_page_last_index     = null;
   _via_image_grid_stack_prev_page     = [];
@@ -7420,52 +7407,12 @@ function image_grid_set_content(img_index_list) {
   _via_image_grid_load_ongoing = true;
 
   var n = _via_image_grid_img_index_list.length;
-  switch ( _via_settings.ui.image_grid.show_image_policy ) {
-  case 'all':
-    _via_image_grid_page_img_index_list = _via_image_grid_img_index_list.slice(0);
-    break;
-  case 'first_mid_last':
-    if ( n < 3 ) {
-      var i;
-      for ( i = 0; i < n; ++i ) {
-        _via_image_grid_page_img_index_list.push( _via_image_grid_img_index_list[i] );
-      }
-    } else {
-      _via_image_grid_page_img_index_list.push( _via_image_grid_img_index_list[0] );
-      _via_image_grid_page_img_index_list.push( _via_image_grid_img_index_list[ Math.floor(n/2) ] );
-      _via_image_grid_page_img_index_list.push( _via_image_grid_img_index_list[n-1] );
-    }
-    break;
-  case 'even_indexed':
-    var i;
-    for ( i = 0; i < n; ++i ) {
-      if ( i % 2 !== 0 ) { // since the user views (i+1) based indexing
-        _via_image_grid_page_img_index_list.push( _via_image_grid_img_index_list[i] );
-      }
-    }
-    break;
-  case 'odd_indexed':
-    var i;
-    for ( i = 0; i < n; ++i ) {
-      if ( i % 2 === 0 ) { // since the user views (i+1) based indexing
-        _via_image_grid_page_img_index_list.push( _via_image_grid_img_index_list[i] );
-      }
-    }
-    break;
-  case 'gap5':  // fallback
-  case 'gap25': // fallback
-  case 'gap50': // fallback
-    var del = parseInt( _via_settings.ui.image_grid.show_image_policy.substr( 'gap'.length ) );
-    var i;
-    for ( i = 0; i < n; i = i + del ) {
-      _via_image_grid_page_img_index_list.push( _via_image_grid_img_index_list[i] );
-    }
-    break;
-  }
+  _via_image_grid_page_img_index_list = _via_image_grid_img_index_list.slice(0);
+   
 
   _via_image_grid_visible_img_index_list = [];
 
-  image_grid_update_sel_count_html();
+  
   annotation_editor_update_content();
 
   image_grid_content_append_img( _via_image_grid_page_first_index );
@@ -7551,20 +7498,6 @@ function image_grid_add_img_if_possible(img) {
     var index = _via_image_grid_page_img_index_list.indexOf(img_index);
     _via_image_grid_page_last_index = index;
 
-    // setup prev, next navigation
-    var info = document.getElementById('image_grid_nav');
-    var html = [];
-    var first_index = _via_image_grid_page_first_index;
-    var last_index  = _via_image_grid_page_last_index - 1;
-    html.push('<span>Showing&nbsp;' + (first_index + 1) +
-              ' to ' + (last_index + 1) + '&nbsp;:</span>');
-    if ( _via_image_grid_stack_prev_page.length ) {
-      html.push('<span class="text_button" onclick="image_grid_page_prev()">Prev</span>');
-    } else {
-      html.push('<span>Prev</span>');
-    }
-    html.push('<span class="text_button" onclick="image_grid_page_next()">Next</span');
-    info.innerHTML = html.join('');
   } else {
     // process this image and trigger addition of next image in sequence
     var img_fn_list_index = _via_image_grid_page_img_index_list.indexOf(img_index);
@@ -7582,17 +7515,6 @@ function image_grid_add_img_if_possible(img) {
       } else {
         // image grid load operation was cancelled
         _via_image_grid_page_last_index = _via_image_grid_page_first_index; // load this page again
-
-        var info = document.getElementById('image_grid_nav');
-        var html = [];
-        html.push('<span>Cancelled&nbsp;:</span>');
-        if ( _via_image_grid_stack_prev_page.length ) {
-          html.push('<span class="text_button" onclick="image_grid_page_prev()">Prev</span>');
-        } else {
-          html.push('<span>Prev</span>');
-        }
-        html.push('<span class="text_button" onclick="image_grid_page_next()">Next</span');
-        info.innerHTML = html.join('');
       }
     } else {
       // last page
@@ -7603,29 +7525,8 @@ function image_grid_add_img_if_possible(img) {
         image_grid_page_show_all_regions();
       }
       _via_image_grid_load_ongoing = false;
-
-      // setup prev, next navigation
-      var info = document.getElementById('image_grid_nav');
-      var html = [];
-      var first_index = _via_image_grid_page_first_index;
-      var last_index  = _via_image_grid_page_last_index;
-      html.push('<span>Showing&nbsp;' + (first_index + 1) +
-                ' to ' + (last_index + 1) + ' (end)&nbsp;</span>');
-      if ( _via_image_grid_stack_prev_page.length ) {
-        html.push('<span class="text_button" onclick="image_grid_page_prev()">Prev</span>');
-      } else {
-        html.push('<span>Prev</span>');
-      }
-      html.push('<span>Next</span');
-
-      info.innerHTML = html.join('');
     }
   }
-}
-
-function image_grid_onchange_show_image_policy(p) {
-  _via_settings.ui.image_grid.show_image_policy = p.options[p.selectedIndex].value;
-  image_grid_set_content(_via_image_grid_img_index_list);
 }
 
 function image_grid_page_show_all_regions() {
@@ -7803,12 +7704,8 @@ function image_grid_mouseup_handler(e) {
     img_index = _via_image_grid_img_index_list[i];
     image_grid_update_img_select(img_index, operation);
   }
-  image_grid_update_sel_count_html();
+ 
   annotation_editor_update_content();
-}
-
-function image_grid_update_sel_count_html() {
-  document.getElementById('image_grid_group_by_sel_img_count').innerHTML = _via_image_grid_selected_img_index_list.length;
 }
 
 // state \in {'select', 'unselect', 'toggle'}
@@ -7846,14 +7743,14 @@ function image_grid_update_img_select(img_index, state) {
 
 function image_grid_group_select_all() {
   image_grid_group_set_all_selection_state('select');
-  image_grid_update_sel_count_html();
+  
   annotation_editor_update_content();
   show_message('Selected all images in the current group');
 }
 
 function image_grid_group_select_none() {
   image_grid_group_set_all_selection_state('unselect');
-  image_grid_update_sel_count_html();
+  
   annotation_editor_update_content();
   show_message('Removed selection of all images in the current group');
 }
@@ -8362,7 +8259,6 @@ function image_grid_page_next() {
 
   image_grid_clear_content();
   _via_image_grid_load_ongoing = true;
-  image_grid_page_nav_show_cancel();
   image_grid_content_append_img( _via_image_grid_page_first_index );
 }
 
@@ -8372,16 +8268,7 @@ function image_grid_page_prev() {
 
   image_grid_clear_content();
   _via_image_grid_load_ongoing = true;
-  image_grid_page_nav_show_cancel();
   image_grid_content_append_img( _via_image_grid_page_first_index );
-}
-
-function image_grid_page_nav_show_cancel() {
-  var info = document.getElementById('image_grid_nav');
-  var html = [];
-  html.push('<span>Loading images ... </span>');
-  html.push('<span class="text_button" onclick="image_grid_cancel_load_ongoing()">Cancel</span>');
-  info.innerHTML = html.join('');
 }
 
 function image_grid_cancel_load_ongoing() {
