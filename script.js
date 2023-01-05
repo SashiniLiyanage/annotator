@@ -53,7 +53,6 @@ var VIA_VERSION      = '2.0.12';
 var VIA_NAME         = 'VGG Image Annotator';
 var VIA_SHORT_NAME   = 'VIA';
 var VIA_REGION_SHAPE = {
-                         ELLIPSE:'ellipse',
                          POLYGON:'polygon'
                        };
 
@@ -886,32 +885,6 @@ function via_region_shape_to_coco_annotation(shape_attributes) {
   var annotation = { 'segmentation':[[]], 'area':[], 'bbox':[], 'iscrowd':0 };
 
   switch(shape_attributes['name']) {
-  case 'ellipse':
-    var a,b;
-    a = shape_attributes['rx'];
-    b = shape_attributes['ry'];
-    var rotation = 0;
-    // older version of VIA2 did not support rotated ellipse and hence 'theta' attribute may not be available
-    if( shape_attributes.hasOwnProperty('theta') ) {
-      rotation = shape_attributes['theta'];
-    }
-
-    var theta_to_radian = Math.PI/180;
-
-    for ( var theta = 0; theta < 360; theta = theta + VIA_POLYGON_SEGMENT_SUBTENDED_ANGLE ) {
-      var theta_radian = theta * theta_to_radian;
-      var x = shape_attributes['cx'] +
-              ( a * Math.cos(theta_radian) * Math.cos(rotation) ) -
-              ( b * Math.sin(theta_radian) * Math.sin(rotation) );
-      var y = shape_attributes['cy'] +
-              ( a * Math.cos(theta_radian) * Math.sin(rotation) ) +
-              ( b * Math.sin(theta_radian) * Math.cos(rotation) );
-      annotation['segmentation'][0].push( fixfloat(x), fixfloat(y) );
-    }
-    annotation['bbox'] = polygon_to_bbox(annotation['segmentation'][0]);
-    annotation['area'] = annotation['bbox'][2] * annotation['bbox'][3];
-    break;
-
   case 'polygon':
     annotation['segmentation'][0] = [];
     var x0 = +Infinity;
@@ -1019,21 +992,6 @@ function _via_load_canvas_regions() {
     _via_canvas_regions.push(region_i);
 
     switch(_via_canvas_regions[i].shape_attributes['name']) {
-    case VIA_REGION_SHAPE.ELLIPSE:
-      var cx = regions[i].shape_attributes['cx'] / _via_canvas_scale;
-      var cy = regions[i].shape_attributes['cy'] / _via_canvas_scale;
-      var rx = regions[i].shape_attributes['rx'] / _via_canvas_scale;
-      var ry = regions[i].shape_attributes['ry'] / _via_canvas_scale;
-      // rotation in radians
-      var theta = regions[i].shape_attributes['theta'];
-      _via_canvas_regions[i].shape_attributes['cx'] = Math.round(cx);
-      _via_canvas_regions[i].shape_attributes['cy'] = Math.round(cy);
-      _via_canvas_regions[i].shape_attributes['rx'] = Math.round(rx);
-      _via_canvas_regions[i].shape_attributes['ry'] = Math.round(ry);
-      _via_canvas_regions[i].shape_attributes['theta'] = theta;
-      break;
-
-    
     case VIA_REGION_SHAPE.POLYGON:
       var all_points_x = regions[i].shape_attributes['all_points_x'].slice(0);
       var all_points_y = regions[i].shape_attributes['all_points_y'].slice(0);
@@ -1273,41 +1231,6 @@ function _via_reg_canvas_mouseup_handler(e) {
     var canvas_attr = _via_canvas_regions[region_id].shape_attributes;
 
     switch (canvas_attr['name']) {
-    case VIA_REGION_SHAPE.ELLIPSE:
-      var new_rx = canvas_attr['rx'];
-      var new_ry = canvas_attr['ry'];
-      var new_theta = canvas_attr['theta'];
-      var dx = Math.abs(canvas_attr['cx'] - _via_current_x);
-      var dy = Math.abs(canvas_attr['cy'] - _via_current_y);
-
-      switch(_via_region_edge[1]) {
-      case 5:
-        new_ry = Math.sqrt(dx*dx + dy*dy);
-        new_theta = Math.atan2(- (_via_current_x - canvas_attr['cx']), (_via_current_y - canvas_attr['cy']));
-        break;
-
-      case 6:
-        new_rx = Math.sqrt(dx*dx + dy*dy);
-        new_theta = Math.atan2((_via_current_y - canvas_attr['cy']), (_via_current_x - canvas_attr['cx']));
-        break;
-
-      default:
-        new_rx = dx;
-        new_ry = dy;
-        new_theta = 0;
-        break;
-      }
-
-      image_attr['rx'] = fixfloat(new_rx * _via_canvas_scale);
-      image_attr['ry'] = fixfloat(new_ry * _via_canvas_scale);
-      image_attr['theta'] = fixfloat(new_theta);
-
-      canvas_attr['rx'] = Math.round(image_attr['rx'] / _via_canvas_scale);
-      canvas_attr['ry'] = Math.round(image_attr['ry'] / _via_canvas_scale);
-      canvas_attr['theta'] = fixfloat(new_theta);
-      break;
-
-    
     case VIA_REGION_SHAPE.POLYGON:
       var moved_vertex_id = _via_region_edge[1] - VIA_POLYGON_RESIZE_VERTEX_OFFSET;
 
@@ -1448,32 +1371,6 @@ function _via_reg_canvas_mouseup_handler(e) {
 
     if ( region_dx > VIA_REGION_MIN_DIM && region_dy > VIA_REGION_MIN_DIM ) { // avoid regions with 0 dim
       switch(_via_current_shape) {
-      case VIA_REGION_SHAPE.ELLIPSE:
-        var cx = Math.round(region_x0 * _via_canvas_scale);
-        var cy = Math.round(region_y0 * _via_canvas_scale);
-        var rx = Math.round(region_dx * _via_canvas_scale);
-        var ry = Math.round(region_dy * _via_canvas_scale);
-        var theta = 0;
-
-        original_img_region.shape_attributes['name'] = 'ellipse';
-        original_img_region.shape_attributes['cx'] = cx;
-        original_img_region.shape_attributes['cy'] = cy;
-        original_img_region.shape_attributes['rx'] = rx;
-        original_img_region.shape_attributes['ry'] = ry;
-        original_img_region.shape_attributes['theta'] = theta;
-
-        canvas_img_region.shape_attributes['name'] = 'ellipse';
-        canvas_img_region.shape_attributes['cx'] = Math.round( cx / _via_canvas_scale );
-        canvas_img_region.shape_attributes['cy'] = Math.round( cy / _via_canvas_scale );
-        canvas_img_region.shape_attributes['rx'] = Math.round( rx / _via_canvas_scale );
-        canvas_img_region.shape_attributes['ry'] = Math.round( ry / _via_canvas_scale );
-        canvas_img_region.shape_attributes['theta'] = theta;
-
-        new_region_added = true;
-        break;
-
-      
-      
       case VIA_REGION_SHAPE.POLYGON:
         // handled by _via_is_user_drawing_polygon
         break;
@@ -1531,13 +1428,6 @@ function _via_reg_canvas_mousemove_handler(e) {
     if ( rf != null && _via_user_sel_region_id !== -1) {
       var canvas_attr = _via_canvas_regions[_via_user_sel_region_id].shape_attributes;
       switch (canvas_attr['name']) {
-      case VIA_REGION_SHAPE.ELLIPSE:
-        var rf = document.getElementById('region_info');
-        var attr = _via_canvas_regions[_via_user_sel_region_id].shape_attributes;
-        rf.innerHTML +=  ',' + ' X-radius:' + attr['rx'] + ',' + ' Y-radius:' + attr['ry'];
-        break;
-
-      
       case VIA_REGION_SHAPE.POLYGON:
         break;
       }
@@ -1620,16 +1510,6 @@ function _via_reg_canvas_mousemove_handler(e) {
     _via_reg_ctx.strokeStyle = VIA_THEME_BOUNDARY_FILL_COLOR;
 
     switch (_via_current_shape ) {
-    case VIA_REGION_SHAPE.ELLIPSE:
-      _via_draw_ellipse_region(region_x0, region_y0, dx, dy, 0, false);
-
-      // display the current region info
-      if ( rf != null) {
-        rf.innerHTML +=  ',' + ' X-radius:' + fixfloat(dx) + ',' + ' Y-radius:' + fixfloat(dy);
-      }
-      break;
-
-    
     case VIA_REGION_SHAPE.POLYGON:
       // this is handled by the if ( _via_is_user_drawing_polygon ) { ... }
       // see below
@@ -1651,44 +1531,6 @@ function _via_reg_canvas_mousemove_handler(e) {
     var region_id = _via_region_edge[0];
     var attr = _via_canvas_regions[region_id].shape_attributes;
     switch (attr['name']) {
-    case VIA_REGION_SHAPE.ELLIPSE:
-      var new_rx = attr['rx'];
-      var new_ry = attr['ry'];
-      var new_theta = attr['theta'];
-      var dx = Math.abs(attr['cx'] - _via_current_x);
-      var dy = Math.abs(attr['cy'] - _via_current_y);
-      switch(_via_region_edge[1]) {
-      case 5:
-        new_ry = Math.sqrt(dx*dx + dy*dy);
-        new_theta = Math.atan2(- (_via_current_x - attr['cx']), (_via_current_y - attr['cy']));
-        break;
-
-      case 6:
-        new_rx = Math.sqrt(dx*dx + dy*dy);
-        new_theta = Math.atan2((_via_current_y - attr['cy']), (_via_current_x - attr['cx']));
-        break;
-
-      default:
-        new_rx = dx;
-        new_ry = dy;
-        new_theta = 0;
-        break;
-      }
-
-      _via_draw_ellipse_region(attr['cx'],
-                               attr['cy'],
-                               new_rx,
-                               new_ry,
-                               new_theta,
-                               true);
-      if ( rf != null) {
-        var curr_texts = rf.innerHTML.split(",");
-        rf.innerHTML = "";
-        rf.innerHTML = curr_texts[0] + ',' + curr_texts[1] + ',' + ' X-radius:' + fixfloat(new_rx) + ',' + ' Y-radius:' + fixfloat(new_ry);
-      }
-      break;
-
-    
     case VIA_REGION_SHAPE.POLYGON:
       var moved_all_points_x = attr['all_points_x'].slice(0);
       var moved_all_points_y = attr['all_points_y'].slice(0);
@@ -1723,17 +1565,6 @@ function _via_reg_canvas_mousemove_handler(e) {
     var attr = _via_canvas_regions[_via_user_sel_region_id].shape_attributes;
 
     switch (attr['name']) {
-    case VIA_REGION_SHAPE.ELLIPSE:
-      if (typeof(attr['theta']) === 'undefined') { attr['theta'] = 0; }
-      _via_draw_ellipse_region(attr['cx'] + move_x,
-                               attr['cy'] + move_y,
-                               attr['rx'],
-                               attr['ry'],
-                               attr['theta'],
-                               true);
-      break;
-
-    
     case VIA_REGION_SHAPE.POLYGON:
       var moved_all_points_x = attr['all_points_x'].slice(0);
       var moved_all_points_y = attr['all_points_y'].slice(0);
@@ -1786,8 +1617,6 @@ function _via_move_selected_regions(move_x, move_y) {
 
 function _via_validate_move_region(x, y, canvas_attr) {
   switch( canvas_attr['name'] ) {
-    case VIA_REGION_SHAPE.ELLIPSE:
-    
     case VIA_REGION_SHAPE.POLYGON:
       if (x < 0 || y < 0 ||
           x > _via_current_image_width || y > _via_current_image_height) {
@@ -1803,8 +1632,6 @@ function _via_move_region(region_id, move_x, move_y) {
   var canvas_attr = _via_canvas_regions[region_id].shape_attributes;
 
   switch( canvas_attr['name'] ) {
-  case VIA_REGION_SHAPE.ELLIPSE: // Fall-through
-  
   case VIA_REGION_SHAPE.POLYGON:
     var img_px = image_attr['all_points_x'];
     var img_py = image_attr['all_points_y'];
@@ -1899,17 +1726,6 @@ function draw_all_regions() {
     }
 
     switch( attr['name'] ) {
-    case VIA_REGION_SHAPE.ELLIPSE:
-      if (typeof(attr['theta']) === 'undefined') { attr['theta'] = 0; }
-      _via_draw_ellipse_region(attr['cx'],
-                               attr['cy'],
-                               attr['rx'],
-                               attr['ry'],
-                               attr['theta'],
-                               is_selected);
-      break;
-
-    
     case VIA_REGION_SHAPE.POLYGON:
       _via_draw_polygon_region(attr['all_points_x'],
                                attr['all_points_y'],
@@ -1930,59 +1746,6 @@ function _via_draw_control_point(cx, cy) {
   _via_reg_ctx.fillStyle = VIA_THEME_CONTROL_POINT_COLOR;
   _via_reg_ctx.globalAlpha = 1.0;
   _via_reg_ctx.fill();
-}
-
-function _via_draw_ellipse_region(cx, cy, rx, ry, rr, is_selected) {
-  if (is_selected) {
-    _via_draw_ellipse(cx, cy, rx, ry, rr);
-
-    _via_reg_ctx.strokeStyle = VIA_THEME_SEL_REGION_FILL_BOUNDARY_COLOR;
-    _via_reg_ctx.lineWidth   = VIA_THEME_REGION_BOUNDARY_WIDTH/2;
-    _via_reg_ctx.stroke();
-
-    _via_reg_ctx.fillStyle   = VIA_THEME_SEL_REGION_FILL_COLOR;
-    _via_reg_ctx.globalAlpha = VIA_THEME_SEL_REGION_OPACITY;
-    _via_reg_ctx.fill();
-    _via_reg_ctx.globalAlpha = 1.0;
-
-    _via_draw_control_point(cx + rx * Math.cos(rr), cy + rx * Math.sin(rr));
-    _via_draw_control_point(cx - rx * Math.cos(rr), cy - rx * Math.sin(rr));
-    _via_draw_control_point(cx + ry * Math.sin(rr), cy - ry * Math.cos(rr));
-    _via_draw_control_point(cx - ry * Math.sin(rr), cy + ry * Math.cos(rr));
-
-  } else {
-    // draw a fill line
-    _via_reg_ctx.lineWidth   = VIA_THEME_REGION_BOUNDARY_WIDTH/2;
-    _via_draw_ellipse(cx, cy, rx, ry, rr);
-    _via_reg_ctx.stroke();
-
-    if ( rx > VIA_THEME_REGION_BOUNDARY_WIDTH &&
-         ry > VIA_THEME_REGION_BOUNDARY_WIDTH ) {
-      // draw a boundary line on both sides of the fill line
-      _via_reg_ctx.strokeStyle = VIA_THEME_BOUNDARY_LINE_COLOR;
-      _via_reg_ctx.lineWidth   = VIA_THEME_REGION_BOUNDARY_WIDTH/4;
-      _via_draw_ellipse(cx, cy,
-                        rx + VIA_THEME_REGION_BOUNDARY_WIDTH/2,
-                        ry + VIA_THEME_REGION_BOUNDARY_WIDTH/2,
-                        rr);
-      _via_reg_ctx.stroke();
-      _via_draw_ellipse(cx, cy,
-                        rx - VIA_THEME_REGION_BOUNDARY_WIDTH/2,
-                        ry - VIA_THEME_REGION_BOUNDARY_WIDTH/2,
-                        rr);
-      _via_reg_ctx.stroke();
-    }
-  }
-}
-
-function _via_draw_ellipse(cx, cy, rx, ry, rr) {
-  _via_reg_ctx.save();
-
-  _via_reg_ctx.beginPath();
-  _via_reg_ctx.ellipse(cx, cy, rx, ry, rr, 0, 2 * Math.PI);
-
-  _via_reg_ctx.restore(); // restore to original state
-  _via_reg_ctx.closePath();
 }
 
 function _via_draw_polygon_region(all_points_x, all_points_y, is_selected, shape) {
@@ -2113,24 +1876,6 @@ function get_region_bounding_box(region) {
   var bbox = new Array(4);
 
   switch( d['name'] ) {
-  case 'ellipse':
-    let radians = d['theta'];
-    let radians90 = radians + Math.PI / 2;
-    let ux = d['rx'] * Math.cos(radians);
-    let uy = d['rx'] * Math.sin(radians);
-    let vx = d['ry'] * Math.cos(radians90);
-    let vy = d['ry'] * Math.sin(radians90);
-
-    let width = Math.sqrt(ux * ux + vx * vx) * 2;
-    let height = Math.sqrt(uy * uy + vy * vy) * 2;
-
-    bbox[0] = d['cx'] - (width / 2);
-    bbox[1] = d['cy'] - (height / 2);
-    bbox[2] = d['cx'] + (width / 2);
-    bbox[3] = d['cy'] + (height / 2);
-    break;
-
-  
   case 'polygon':
     var all_points_x = d['all_points_x'];
     var all_points_y = d['all_points_y'];
@@ -2205,16 +1950,6 @@ function is_inside_this_region(px, py, region_id) {
   var attr   = _via_canvas_regions[region_id].shape_attributes;
   var result = false;
   switch ( attr['name'] ) {
-  case VIA_REGION_SHAPE.ELLIPSE:
-    result = is_inside_ellipse(attr['cx'],
-                               attr['cy'],
-                               attr['rx'],
-                               attr['ry'],
-                               attr['theta'],
-                               px, py);
-    break;
-
-  
   case VIA_REGION_SHAPE.POLYGON:
     result = is_inside_polygon(attr['all_points_x'],
                                attr['all_points_y'],
@@ -2229,14 +1964,6 @@ function is_inside_rect(x, y, w, h, px, py) {
     px < (x + w) &&
     py > y &&
     py < (y + h);
-}
-
-function is_inside_ellipse(cx, cy, rx, ry, rr, px, py) {
-  // Inverse rotation of pixel coordinates
-  var dx = Math.cos(-rr) * (cx - px) - Math.sin(-rr) * (cy - py)
-  var dy = Math.sin(-rr) * (cx - px) + Math.cos(-rr) * (cy - py)
-
-  return ((dx * dx) / (rx * rx)) + ((dy * dy) / (ry * ry)) < 1;
 }
 
 // returns 0 when (px,py) is outside the polygon
@@ -2316,16 +2043,6 @@ function is_on_region_corner(px, py) {
     _via_region_edge[0] = i;
 
     switch ( attr['name'] ) {
-    case VIA_REGION_SHAPE.ELLIPSE:
-      result = is_on_ellipse_edge(attr['cx'],
-                                  attr['cy'],
-                                  attr['rx'],
-                                  attr['ry'],
-                                  attr['theta'],
-                                  px, py);
-      break;
-
-    
     case VIA_REGION_SHAPE.POLYGON:
       result = is_on_polygon_vertex(attr['all_points_x'],
                                     attr['all_points_y'],
@@ -2346,33 +2063,6 @@ function is_on_region_corner(px, py) {
   }
   _via_region_edge[0] = -1;
   return _via_region_edge;
-}
-
-function is_on_ellipse_edge(cx, cy, rx, ry, rr, px, py) {
-  // Inverse rotation of pixel coordinates
-  px = px - cx;
-  py = py - cy;
-  var px_ = Math.cos(-rr) * px - Math.sin(-rr) * py;
-  var py_ = Math.sin(-rr) * px + Math.cos(-rr) * py;
-  px = px_ + cx;
-  py = py_ + cy;
-
-  var dx = (cx - px)/rx;
-  var dy = (cy - py)/ry;
-
-  if ( Math.abs(Math.sqrt( dx*dx + dy*dy ) - 1) < VIA_ELLIPSE_EDGE_TOL ) {
-    var theta = Math.atan2( py - cy, px - cx );
-    if ( Math.abs(theta - (Math.PI/2)) < VIA_THETA_TOL ||
-         Math.abs(theta + (Math.PI/2)) < VIA_THETA_TOL) {
-      return 5;
-    }
-    if ( Math.abs(theta) < VIA_THETA_TOL ||
-         Math.abs(Math.abs(theta) - Math.PI) < VIA_THETA_TOL) {
-      return 6;
-    }
-  } else {
-    return 0;
-  }
 }
 
 function is_on_polygon_vertex(all_points_x, all_points_y, px, py) {
@@ -3156,17 +2846,6 @@ function region_visualisation_update(type, default_id, next_offset) {
 //
 // left sidebar toolbox maintainer
 //
-function leftsidebar_toggle() {
-  var leftsidebar = document.getElementById('leftsidebar');
-  if ( leftsidebar.style.display === 'none' ) {
-    leftsidebar.style.display = 'table-cell';
-    document.getElementById('leftsidebar_collapse_panel').style.display = 'none';
-  } else {
-    leftsidebar.style.display = 'none';
-    document.getElementById('leftsidebar_collapse_panel').style.display = 'table-cell';
-  }
-  _via_update_ui_components();
-}
 
 function leftsidebar_show() {
   var leftsidebar = document.getElementById('leftsidebar');
@@ -3495,20 +3174,12 @@ function annotation_editor_get_placement(region_id) {
   var r = _via_canvas_regions[region_id]['shape_attributes'];
   var shape = r['name'];
   switch( shape ) {
-  case 'ellipse':
-    html_position.top = r['cy'] + r['ry'] * Math.cos(r['theta']);
-    html_position.left = r['cx'] - r['ry'] * Math.sin(r['theta']);
-    break;
   case 'polygon':
     var most_left =
       Object.keys(r['all_points_x']).reduce(function(a, b){
         return r['all_points_x'][a] > r['all_points_x'][b] ? a : b });
     html_position.top  = Math.max( r['all_points_y'][most_left] );
     html_position.left = Math.max( r['all_points_x'][most_left] );
-    break;
-  case 'point':
-    html_position.top = r['cy'];
-    html_position.left = r['cx'];
     break;
   }
   html_position.top  = html_position.top + _via_img_panel.offsetTop + VIA_REGION_EDGE_TOL + 'px';
@@ -4379,14 +4050,6 @@ function _via_region( shape, id, data_img_space, view_scale_factor, view_offset_
 
   // set svg attributes for each shape
   switch( this.shape ) {
-  case "ellipse":
-    _via_region_ellipse.call( this );
-    this.svg_attributes = ['cx', 'cy', 'rx', 'ry','transform'];
-    break;
-  case "line":
-    _via_region_line.call( this );
-    this.svg_attributes = ['x1', 'y1', 'x2', 'y2'];
-    break;
   case "polygon":
     _via_region_polygon.call( this );
     this.svg_attributes = ['points'];
@@ -4426,58 +4089,6 @@ _via_region.prototype.get_svg_string = function() {
   }
   return this.svg_string;
 }
-
-
-///
-/// Region shape : ellipse
-///
-function _via_region_ellipse() {
-  this.is_inside  = _via_region_ellipse.prototype.is_inside;
-  this.is_on_edge = _via_region_ellipse.prototype.is_on_edge;
-  this.move  = _via_region_ellipse.prototype.move;
-  this.resize  = _via_region_ellipse.prototype.resize;
-  this.initialize = _via_region_ellipse.prototype.initialize;
-  this.dist_to_nearest_edge = _via_region_ellipse.prototype.dist_to_nearest_edge;
-}
-
-_via_region_ellipse.prototype.initialize = function() {
-  this.cx = this.dview[0];
-  this.cy = this.dview[1];
-  this.rx = Math.abs(this.dview[2] - this.dview[0]);
-  this.ry = Math.abs(this.dview[3] - this.dview[1]);
-
-  this.inv_rx2 = 1 / (this.rx * this.rx);
-  this.inv_ry2 = 1 / (this.ry * this.ry);
-
-  this.recompute_svg = true;
-}
-
-
-
-///
-/// Region shape : line
-///
-function _via_region_line() {
-  this.is_inside  = _via_region_line.prototype.is_inside;
-  this.is_on_edge = _via_region_line.prototype.is_on_edge;
-  this.move  = _via_region_line.prototype.move;
-  this.resize  = _via_region_line.prototype.resize;
-  this.initialize = _via_region_line.prototype.initialize;
-  this.dist_to_nearest_edge = _via_region_line.prototype.dist_to_nearest_edge;
-}
-
-_via_region_line.prototype.initialize = function() {
-  this.x1 = this.dview[0];
-  this.y1 = this.dview[1];
-  this.x2 = this.dview[2];
-  this.y2 = this.dview[3];
-  this.dx = this.x1 - this.x2;
-  this.dy = this.y1 - this.y2;
-  this.mconst = (this.x1 * this.y2) - (this.x2 * this.y1);
-
-  this.recompute_svg = true;
-}
-
 
 ///
 /// Region shape : polygon

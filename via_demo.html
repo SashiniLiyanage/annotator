@@ -72,22 +72,9 @@
     <!-- Middle Panel contains a left-sidebar and image display areas -->
     <div class="middle_panel">
       <!-- this panel contains a button to shows the left side bar -->
-      <div id="leftsidebar_collapse_panel">
-        <span class="text_button" onclick="leftsidebar_toggle()" title="Show left sidebar">&rtrif;</span>
-      </div>
 
       <div id="leftsidebar">
-        <div class="leftsidebar_accordion_panel show" style="float:right; border:2px solid #f2f2f2;">
-          <span class="text_button" onclick="leftsidebar_toggle()" title="Show/hide this toolbar panel">&ltrif;</span>
-        </div>
-
-        <button class="leftsidebar_accordion active">Region Shape</button>
-        <div class="leftsidebar_accordion_panel show">
-          <ul class="region_shape">
-            <li id="region_shape_polygon" onclick="select_region_shape('polygon')" title="Polygon (Shortcut key 4)"><svg height="32" viewbox="0 0 32 32"><use xlink:href="#shape_polygon"></use></svg></li>
-          </ul>
-          <div id="region_info">&nbsp;</div>
-        </div>
+        <div id="region_info">&nbsp;</div>
 
         <!-- Project -->
         <button class="leftsidebar_accordion active" id="project_panel_title">Project</button>
@@ -96,99 +83,6 @@
           <div id="img_fn_list"></div>
           <p>
           </p>
-        </div>
-
-        <button class="leftsidebar_accordion">Keyboard Shortcuts</button>
-        <div class="leftsidebar_accordion_panel">
-          <div style="display:block; text-align:center; padding:1rem;">Available only on image focus</div>
-          <table>
-            <tr>
-              <td style="width:8em;"><span class="key">&larr;</span>&nbsp;<span class="key">&uarr;</span>&nbsp;<span class="key">&rarr;</span>&nbsp;<span class="key">&darr;</span></td>
-              <td>Move selected region by 1 px (Shift to jump)</td>
-            </tr>
-            <tr>
-              <td><span class="key">a</span></td>
-              <td>Select all regions</td>
-            </tr>
-
-            <tr>
-              <td><span class="key">c</span></td>
-              <td>Copy selected regions</td>
-            </tr>
-            <tr>
-              <td><span class="key">v</span></td>
-              <td>Paste selected regions</td>
-            </tr>
-            <tr>
-              <td><span class="key">d</span></td>
-              <td>Delete selected regions</td>
-            </tr>
-            <tr>
-              <td><span class="key">Ctrl</span> + Wheel</td>
-              <td>Zoom in/out (mouse cursor is over image)</td>
-            </tr>
-            <tr>
-              <td><span class="key">l</span></td>
-              <td>Toggle region label</td>
-            </tr>
-            <tr>
-              <td><span class="key">b</span></td>
-              <td>Toggle region boundary</td>
-            </tr>
-            <tr>
-              <td><span class="key">Enter</span></td>
-              <td>Finish drawing polyshape</td>
-            </tr>
-            <tr>
-              <td><span class="key">Backspace</span></td>
-              <td>Delete last polyshape vertex</td>
-            </tr>
-          </table>
-
-          <div style="display:block; text-align:center; padding:1rem;">Always Available</div>
-          <table>
-            <tr>
-              <td style="width:8em;"><span class="key">&larr;</span>&nbsp;<span class="key">&rarr;</span></td>
-              <td>Move to next/previous image</td>
-            </tr>
-            <tr>
-              <td><span class="key">+</span>&nbsp;<span class="key">-</span>&nbsp;<span class="key">=</span></td>
-              <td>Zoom in/out/reset</td>
-            </tr>
-            <tr>
-              <td><span class="key">&uarr;</span></td>
-              <td>Update region label</td>
-            </tr>
-            <tr>
-              <td><span class="key">&darr;</span></td>
-              <td>Update region colour</td>
-            </tr>
-            <tr>
-              <td><span class="key">Spacebar</span></td>
-              <td>Toggle annotation editor (Ctrl to toggle on image editor)</td>
-            </tr>
-            <tr>
-              <td><span class="key">Home</span> / <span class="key">h</span></td>
-              <td>Jump to first image</td>
-            </tr>
-            <tr>
-              <td><span class="key">End</span> / <span class="key">e</span></td>
-              <td>Jump to last image</td>
-            </tr>
-            <tr>
-              <td><span class="key">PgUp</span> / <span class="key">u</span></td>
-              <td>Jump several images</td>
-            </tr>
-            <tr>
-              <td><span class="key">PgDown</span> / <span class="key">d</span></td>
-              <td>Jump several images</td>
-            </tr>
-
-            <tr>
-              <td><span class="key">Esc</span></td>
-              <td>Cancel ongoing task</td>
-            </tr>
-          </table>
         </div>
 
       </div> <!-- end of leftsidebar -->
