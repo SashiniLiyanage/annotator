@@ -20,7 +20,6 @@ function _via_load_submodules() {
     }
   
     _via_show_img(0);
-    update_img_fn_list();
   }
   
   function _via_basic_demo_define_attributes() {
@@ -49,9 +48,6 @@ function _via_load_submodules() {
 
 "use strict";
 
-var VIA_VERSION      = '2.0.12';
-var VIA_NAME         = 'VGG Image Annotator';
-var VIA_SHORT_NAME   = 'VIA';
 var VIA_REGION_SHAPE = {
                          POLYGON:'polygon'
                        };
@@ -64,15 +60,11 @@ var VIA_ATTRIBUTE_TYPE = { TEXT:'text',
                          };
 
 var VIA_DISPLAY_AREA_CONTENT_NAME = {IMAGE:'image_panel',
-                                     PAGE_404:'page_404',
                                      PAGE_START_INFO:'page_start_info'
                                     };
 
 var VIA_ANNOTATION_EDITOR_MODE    = {SINGLE_REGION:'single_region',
                                      ALL_REGIONS:'all_regions'};
-var VIA_ANNOTATION_EDITOR_PLACEMENT = {NEAR_REGION:'NEAR_REGION',
-                                       IMAGE_BOTTOM:'IMAGE_BOTTOM',
-                                       DISABLE:'DISABLE'};
 
 var VIA_REGION_EDGE_TOL           = 5;   // pixel
 var VIA_REGION_CONTROL_POINT_SIZE = 2;
@@ -153,7 +145,6 @@ var _via_is_loading_current_image    = false;
 var _via_is_region_id_visible        = true;
 var _via_is_region_boundary_visible  = true;
 var _via_is_ctrl_pressed             = false;
-var _via_is_debug_mode               = true;
 var _via_is_message_visible          = true;
 
 // region
@@ -197,17 +188,9 @@ var _via_is_save_ongoing            = false;
 // all the image_id and image_filename of images added by the user is
 // stored in _via_image_id_list and _via_image_filename_list
 //
-// Image filename list (img_fn_list) contains a filtered list of images
-// currently accessible by the user. The img_fn_list is visible in the
-// left side toolbar
-// the contents of _via_img_fn_list_img_index_list.
 var _via_image_id_list                 = []; // array of all image id (in order they were added by user)
 var _via_image_filename_list           = []; // array of all image filename
 var _via_image_load_error              = []; // {true, false}
-
-var _via_reload_img_fn_list_table      = true;
-var _via_img_fn_list_img_index_list    = []; // image index list of images show in img_fn_list
-var _via_img_fn_list_html              = []; // html representation of image filename list
 
 // image grid
 var _via_display_area_content_name          = ''; // describes what is currently shown in display area
@@ -232,7 +215,7 @@ _via_settings.ui.image = {};
 _via_settings.ui.image.region_label      = '__via_region_id__'; // default: region_id
 _via_settings.ui.image.region_color      = '__via_default_region_color__'; // default color: yellow
 _via_settings.ui.image.region_label_font = '10px Sans';
-_via_settings.ui.image.on_image_annotation_editor_placement = VIA_ANNOTATION_EDITOR_PLACEMENT.NEAR_REGION;
+_via_settings.ui.image.on_image_annotation_editor_placement = 'NEAR_REGION';
 
 _via_settings.core                  = {};
 _via_settings.core.buffer_size      = 4*VIA_IMG_PRELOAD_COUNT + 2;
@@ -248,8 +231,6 @@ var img_buffer_now  = document.getElementById("img_buffer_now");
 var annotation_list_snippet = document.getElementById("annotation_list_snippet");
 var annotation_textarea     = document.getElementById("annotation_textarea");
 
-var img_fn_list_panel     = document.getElementById('img_fn_list_panel');
-var img_fn_list           = document.getElementById('img_fn_list');
 var attributes_panel      = document.getElementById('attributes_panel');
 var leftsidebar           = document.getElementById('leftsidebar');
 
@@ -289,11 +270,6 @@ function file_region() {
 // Initialization routine
 //
 function _via_init() {
-  show_message(VIA_NAME + ' (' + VIA_SHORT_NAME + ') version ' + VIA_VERSION +
-               '. Ready !', 2*VIA_THEME_MESSAGE_TIMEOUT_MS);
-
-  document.getElementById('img_fn_list').style.display = 'block';
-  document.getElementById('leftsidebar').style.display = 'table-cell';
 
   // initialize default project
   project_init_default_project();
@@ -307,7 +283,6 @@ function _via_init() {
   _via_init_mouse_handlers();
 
   show_single_image_view();
-  init_leftsidebar_accordion();
   init_message_panel();
 
   // run attached sub-modules (if any)
@@ -333,7 +308,6 @@ function _via_init_keyboard_handlers() {
 
 // handles drawing of regions over image by the user
 function _via_init_mouse_handlers() {
-  _via_reg_canvas.addEventListener('dblclick', _via_reg_canvas_dblclick_handler, false);
   _via_reg_canvas.addEventListener('mousedown', _via_reg_canvas_mousedown_handler, false);
   _via_reg_canvas.addEventListener('mouseup', _via_reg_canvas_mouseup_handler, false);
   _via_reg_canvas.addEventListener('mouseover', _via_reg_canvas_mouseover_handler, false);
@@ -379,7 +353,6 @@ function set_display_area_content(content_name) {
 
 function show_single_image_view() {
   if (_via_current_image_loaded) {
-    img_fn_list_clear_all_style();
     _via_show_img(_via_image_index);
     set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.IMAGE);
     annotation_editor_update_content();
@@ -522,10 +495,6 @@ function import_annotations_from_json(data_str) {
                  '[' + region_import_count + '] regions, ' +
                  '[' + malformed_entries_count + '] malformed entries.');
 
-    if ( file_added_count ) {
-      update_img_fn_list();
-    }
-
     if ( _via_current_image_loaded ) {
       if ( region_import_count ) {
         annotation_editor_update_content();
@@ -541,68 +510,6 @@ function import_annotations_from_json(data_str) {
 
     ok_callback([file_added_count, region_import_count, malformed_entries_count]);
   });
-}
-
-// assumes that csv line follows the RFC 4180 standard
-// see: https://en.wikipedia.org/wiki/Comma-separated_values
-function parse_csv_line(s, field_separator) {
-  if (typeof(s) === 'undefined' || s.length === 0 ) {
-    return [];
-  }
-
-  if (typeof(field_separator) === 'undefined') {
-    field_separator = ',';
-  }
-  var double_quote_seen = false;
-  var start = 0;
-  var d = [];
-
-  var i = 0;
-  while ( i < s.length) {
-    if (s.charAt(i) === field_separator) {
-      if (double_quote_seen) {
-        // field separator inside double quote is ignored
-        i = i + 1;
-      } else {
-        //var part = s.substr(start, i - start);
-        d.push( s.substr(start, i - start) );
-        start = i + 1;
-        i = i + 1;
-      }
-    } else {
-      if (s.charAt(i) === '"') {
-        if (double_quote_seen) {
-          if (s.charAt(i+1) === '"') {
-            // ignore escaped double quotes
-            i = i + 2;
-          } else {
-            // closing of double quote
-            double_quote_seen = false;
-            i = i + 1;
-          }
-        } else {
-          double_quote_seen = true;
-          start = i;
-          i = i + 1;
-        }
-      } else {
-        i = i + 1;
-      }
-    }
-
-  }
-  // extract the last field (csv rows have no trailing comma)
-  d.push( s.substr(start) );
-  return d;
-}
-
-// s = '{"name":"rect","x":188,"y":90,"width":243,"height":233}'
-function json_str_to_map(s) {
-  if (typeof(s) === 'undefined' || s.length === 0 ) {
-    return {};
-  }
-
-  return JSON.parse(s);
 }
 
 // ensure the exported json string conforms to RFC 4180
@@ -625,46 +532,6 @@ function escape_for_csv(s) {
 
 function unescape_from_csv(s) {
   return s.replace(/""/g, '"');
-}
-
-function remove_prefix_suffix_quotes(s) {
-  if ( s.charAt(0) === '"' && s.charAt(s.length-1) === '"' ) {
-    return s.substr(1, s.length-2);
-  } else {
-    return s;
-  }
-}
-
-function clone_image_region(r0) {
-  var r1 = new file_region();
-
-  // copy shape attributes
-  for ( var key in r0.shape_attributes ) {
-    r1.shape_attributes[key] = clone_value(r0.shape_attributes[key]);
-  }
-
-  // copy region attributes
-  for ( var key in r0.region_attributes ) {
-    r1.region_attributes[key] = clone_value(r0.region_attributes[key]);
-  }
-  return r1;
-}
-
-function clone_value(value) {
-  if ( typeof(value) === 'object' ) {
-    if ( Array.isArray(value) ) {
-      return value.slice(0);
-    } else {
-      var copy = {};
-      for ( var p in value ) {
-        if ( value.hasOwnProperty(p) ) {
-          copy[p] = clone_value(value[p]);
-        }
-      }
-      return copy;
-    }
-  }
-  return value;
 }
 
 function _via_get_image_id(filename, size) {
@@ -930,15 +797,6 @@ function init_message_panel() {
   }, false);
 }
 
-function toggle_message_visibility() {
-  if(_via_is_message_visible) {
-    show_message('Disabled status messages');
-    _via_is_message_visible = false;
-  } else {
-    _via_is_message_visible = true;
-    show_message('Status messages are now visible');
-  }
-}
 
 function show_message(msg, t) {
   if ( _via_message_clear_timer ) {
@@ -1007,16 +865,6 @@ function _via_load_canvas_regions() {
 }
 
 // updates currently selected region shape
-function select_region_shape(sel_shape_name) {
-  for ( var shape_name in VIA_REGION_SHAPE ) {
-    var ui_element = document.getElementById('region_shape_' + VIA_REGION_SHAPE[shape_name]);
-    ui_element.classList.remove('selected');
-  }
-
-  _via_current_shape = sel_shape_name;
-  var ui_element = document.getElementById('region_shape_' + _via_current_shape);
-  ui_element.classList.add('selected');
-}
 
 function set_all_canvas_size(w, h) {
   _via_reg_canvas.height = h;
@@ -1028,38 +876,6 @@ function set_all_canvas_size(w, h) {
 
 function set_all_canvas_scale(s) {
   _via_reg_ctx.scale(s, s);
-}
-
-function show_all_canvas() {
-  image_panel.style.display = 'inline-block';
-}
-
-function hide_all_canvas() {
-  image_panel.style.display = 'none';
-}
-
-function jump_to_image(image_index) {
-  if ( _via_img_count <= 0 ) {
-    return;
-  }
-
-    if ( image_index >= 0 && image_index < _via_img_count) {
-      _via_show_img(image_index);
-    }
-}
-
-function count_missing_region_attr(img_id) {
-  var miss_region_attr_count = 0;
-  var attr_count = Object.keys(_via_region_attributes).length;
-  for( var i=0; i < _via_img_metadata[img_id].regions.length; ++i ) {
-    var set_attr_count = Object.keys(_via_img_metadata[img_id].regions[i].region_attributes).length;
-    miss_region_attr_count += ( attr_count - set_attr_count );
-  }
-  return miss_region_attr_count;
-}
-
-function count_missing_file_attr(img_id) {
-  return Object.keys(_via_file_attributes).length - Object.keys(_via_img_metadata[img_id].file_attributes).length;
 }
 
 function toggle_all_regions_selection(is_selected) {
@@ -1088,12 +904,6 @@ function set_region_select_state(region_id, is_selected) {
 //
 // Image click handlers
 //
-
-// enter annotation mode on double click
-function _via_reg_canvas_dblclick_handler(e) {
-  e.stopPropagation();
-  // @todo: use double click in future
-}
 
 // user clicks on the canvas
 function _via_reg_canvas_mousedown_handler(e) {
@@ -1749,6 +1559,7 @@ function _via_draw_control_point(cx, cy) {
 }
 
 function _via_draw_polygon_region(all_points_x, all_points_y, is_selected, shape) {
+  
   if ( is_selected ) {
     _via_reg_ctx.strokeStyle = VIA_THEME_SEL_REGION_FILL_BOUNDARY_COLOR;
     _via_reg_ctx.lineWidth   = VIA_THEME_REGION_BOUNDARY_WIDTH/2;
@@ -2018,13 +1829,6 @@ function is_inside_polygon(all_points_x, all_points_y, px, py) {
   }
 }
 
-function is_inside_point(cx, cy, px, py) {
-  var dx = px - cx;
-  var dy = py - cy;
-  var r2 = VIA_POLYGON_VERTEX_MATCH_TOL * VIA_POLYGON_VERTEX_MATCH_TOL;
-  return (dx * dx + dy * dy) < r2;
-}
-
 // returns
 // >0 if (x2,y2) lies on the left side of line joining (x0,y0) and (x1,y1)
 // =0 if (x2,y2) lies on the line joining (x0,y0) and (x1,y1)
@@ -2163,102 +1967,6 @@ function rect_standardize_coordinates(d) {
   }
 }
 
-function rect_update_corner(corner_id, d, x, y, preserve_aspect_ratio) {
-  // pre-condition : d[x0,y0,x1,y1] is standardized
-  // post-condition : corner is moved ( d may not stay standardized )
-  if (preserve_aspect_ratio) {
-    switch(corner_id) {
-    case 1: // Fall-through // top-left
-    case 3: // bottom-right
-      var dx = d[2] - d[0];
-      var dy = d[3] - d[1];
-      var norm = Math.sqrt( dx*dx + dy*dy );
-      var nx = dx / norm; // x component of unit vector along the diagonal of rect
-      var ny = dy / norm; // y component
-      var proj = (x - d[0]) * nx + (y - d[1]) * ny;
-      var proj_x = nx * proj;
-      var proj_y = ny * proj;
-      // constrain (mx,my) to lie on a line connecting (x0,y0) and (x1,y1)
-      x = Math.round( d[0] + proj_x );
-      y = Math.round( d[1] + proj_y );
-      break;
-
-    case 2: // Fall-through // top-right
-    case 4: // bottom-left
-      var dx = d[2] - d[0];
-      var dy = d[1] - d[3];
-      var norm = Math.sqrt( dx*dx + dy*dy );
-      var nx = dx / norm; // x component of unit vector along the diagonal of rect
-      var ny = dy / norm; // y component
-      var proj = (x - d[0]) * nx + (y - d[3]) * ny;
-      var proj_x = nx * proj;
-      var proj_y = ny * proj;
-      // constrain (mx,my) to lie on a line connecting (x0,y0) and (x1,y1)
-      x = Math.round( d[0] + proj_x );
-      y = Math.round( d[3] + proj_y );
-      break;
-    }
-  }
-
-  switch(corner_id) {
-  case 1: // top-left
-    d[0] = x;
-    d[1] = y;
-    break;
-
-  case 3: // bottom-right
-    d[2] = x;
-    d[3] = y;
-    break;
-
-  case 2: // top-right
-    d[2] = x;
-    d[1] = y;
-    break;
-
-  case 4: // bottom-left
-    d[0] = x;
-    d[3] = y;
-    break;
-
-  case 5: // top-middle
-    d[1] = y;
-    break;
-
-  case 6: // right-middle
-    d[2] = x;
-    break;
-
-  case 7: // bottom-middle
-    d[3] = y;
-    break;
-
-  case 8: // left-middle
-    d[0] = x;
-    break;
-  }
-}
-
-function _via_update_ui_components() {
-  if ( ! _via_current_image_loaded ) {
-    return;
-  }
-
-  show_message('Updating user interface components.');
-  switch(_via_display_area_content_name) {
-  case VIA_DISPLAY_AREA_CONTENT_NAME.IMAGE:
-    if ( !_via_is_window_resized && _via_current_image_loaded ) {
-      _via_is_window_resized = true;
-      _via_show_img(_via_image_index);
-
-      if (_via_is_canvas_zoomed) {
-        reset_zoom_level();keydown_event
-      }
-    }
-    break;
-  }
-}
-
 //
 // Shortcut key handlers
 //
@@ -2290,17 +1998,6 @@ function _via_handle_global_keydown_event(e) {
     }
   }
 
-  if ( e.key === 'ArrowRight' || e.key === 'n') {
-    move_to_next_image();
-    e.preventDefault();
-    return;
-  }
-  if ( e.key === 'ArrowLeft' || e.key === 'p') {
-    move_to_prev_image();
-    e.preventDefault();
-    return;
-  }
-
   if ( e.key === 'ArrowUp' ) {
     region_visualisation_update('region_label', '__via_region_id__', 1);
     e.preventDefault();
@@ -2313,18 +2010,6 @@ function _via_handle_global_keydown_event(e) {
     return;
   }
 
-
-  if ( e.key === 'Home') {
-    show_first_image();
-    e.preventDefault();
-    return;
-  }
-  if ( e.key === 'End') {
-    show_last_image();
-    e.preventDefault();
-    return;
-  }
-
   if ( e.key === 'Escape' ) {
     e.preventDefault();
     if ( _via_is_loading_current_image ) {
@@ -2332,7 +2017,7 @@ function _via_handle_global_keydown_event(e) {
     }
 
     if ( _via_is_user_resizing_region ) {
-      // cancel region resizing action
+      // cancel region resizing action_via_is_user_drawing_region
       _via_is_user_resizing_region = false;
     }
 
@@ -2604,93 +2289,6 @@ function delete_regions(img_index) {
   return del_region_count;
 }
 
-function show_first_image() {
-  if (_via_img_count > 0) {
-    _via_show_img( _via_img_fn_list_img_index_list[0] );
-  }
-}
-
-function show_last_image() {
-  if (_via_img_count > 0) {
-    var last_img_index = _via_img_fn_list_img_index_list.length - 1;
-    _via_show_img( _via_img_fn_list_img_index_list[ last_img_index ] );
-  }
-}
-
-function jump_image_block_get_count() {
-  var n = _via_img_fn_list_img_index_list.length;
-  if ( n < 20 ) {
-    return 2;
-  }
-  if ( n < 100 ) {
-    return 10;
-  }
-  if ( n < 1000 ) {
-    return 25;
-  }
-  if ( n < 5000 ) {
-    return 50;
-  }
-  if ( n < 10000 ) {
-    return 100;
-  }
-  if ( n < 50000 ) {
-    return 500;
-  }
-
-  return Math.round( n / 50 );
-}
-
-function move_to_prev_image() {
-  if (_via_img_count > 0) {
-    var current_img_index = _via_image_index;
-    if ( _via_img_fn_list_img_index_list.includes( current_img_index ) ) {
-      var list_index = _via_img_fn_list_img_index_list.indexOf( current_img_index );
-      var next_list_index = list_index - 1;
-      if ( next_list_index === -1 ) {
-        next_list_index = _via_img_fn_list_img_index_list.length - 1;
-      }
-      var next_img_index = _via_img_fn_list_img_index_list[next_list_index];
-      _via_show_img(next_img_index);
-    } else {
-      if ( _via_img_fn_list_img_index_list.length === 0 ) {
-        show_message('Filtered file list does not any files!');
-      } else {
-        _via_show_img( _via_img_fn_list_img_index_list[0] );
-      }
-    }
-
-    if (typeof _via_hook_prev_image === 'function') {
-      _via_hook_prev_image(current_img_index);
-    }
-  }
-}
-
-function move_to_next_image() {
-  if (_via_img_count > 0) {
-    var current_img_index = _via_image_index;
-    if ( _via_img_fn_list_img_index_list.includes( current_img_index ) ) {
-      var list_index = _via_img_fn_list_img_index_list.indexOf( current_img_index );
-      var next_list_index = list_index + 1;
-      if ( next_list_index === _via_img_fn_list_img_index_list.length ) {
-        next_list_index = 0;
-      }
-      var next_img_index = _via_img_fn_list_img_index_list[next_list_index];
-      _via_show_img(next_img_index);
-    } else {
-      if ( _via_img_fn_list_img_index_list.length === 0 ) {
-        show_message('Filtered file list does not contain any files!');
-      } else {
-        _via_show_img( _via_img_fn_list_img_index_list[0] );
-      }
-    }
-
-    if (typeof _via_hook_next_image === 'function') {
-      _via_hook_next_image(current_img_index);
-    }
-  }
-}
-
 function set_zoom(zoom_level_index) {
   if ( zoom_level_index === VIA_CANVAS_DEFAULT_ZOOM_LEVEL_INDEX ) {
     _via_is_canvas_zoomed = false;
@@ -2719,7 +2317,6 @@ function set_zoom(zoom_level_index) {
   _via_load_canvas_regions(); // image to canvas space transform
   _via_redraw_reg_canvas();
   _via_reg_canvas.focus();
-  update_vertical_space();
 }
 
 function reset_zoom_level() {
@@ -2734,7 +2331,6 @@ function reset_zoom_level() {
   } else {
     show_message('Cannot reset zoom because image zoom has not been applied!');
   }
-  update_vertical_space();
 }
 
 function zoom_in() {
@@ -2844,251 +2440,11 @@ function region_visualisation_update(type, default_id, next_offset) {
 }
 
 //
-// left sidebar toolbox maintainer
-//
-
-function leftsidebar_show() {
-  var leftsidebar = document.getElementById('leftsidebar');
-  leftsidebar.style.display = 'table-cell';
-  document.getElementById('leftsidebar_collapse_panel').style.display = 'none';
-}
-
-// source: https://www.w3schools.com/howto/howto_js_accordion.asp
-function init_leftsidebar_accordion() {
-  var leftsidebar = document.getElementById('leftsidebar');
-  leftsidebar.style.width = _via_settings.ui.leftsidebar_width + 'rem';
-
-  var acc = document.getElementsByClassName('leftsidebar_accordion');
-  var i;
-  for ( i = 0; i < acc.length; ++i ) {
-    acc[i].addEventListener('click', function() {
-      update_vertical_space();
-      this.classList.toggle('active');
-      this.nextElementSibling.classList.toggle('show');
-
-      switch( this.innerHTML ) {
-      case 'Project':
-        update_img_fn_list();
-        break;
-      }
-    });
-  }
-}
-
-//
 // image filename list shown in leftsidebar panel
 //
-function is_img_fn_list_visible() {
-  return img_fn_list_panel.classList.contains('show');
-}
+
 
 function img_loading_spinbar(image_index, show) {
-  var panel = document.getElementById('project_panel_title');
-  if ( show ) {
-    panel.innerHTML = 'Project <span style="margin-left:1rem;" class="loading_spinbox"></span>';
-  } else {
-    panel.innerHTML = 'Project';
-  }
-}
-
-function update_img_fn_list() {
-      // show all files
-      _via_img_fn_list_html = [];
-      _via_img_fn_list_img_index_list = [];
-      _via_img_fn_list_html.push('<ul>');
-      for ( var i=0; i < _via_image_filename_list.length; ++i ) {
-        _via_img_fn_list_html.push( img_fn_list_ith_entry_html(i) );
-        _via_img_fn_list_img_index_list.push(i);
-      }
-      _via_img_fn_list_html.push('</ul>');
-      img_fn_list.innerHTML = _via_img_fn_list_html.join('');
-      img_fn_list_scroll_to_current_file();
-}
-
-function filter_selected_region_attribute(property_entry) {
-  const propArray = property_entry.split("=");
-  if ( propArray.length != 2 || propArray[0] === "" || propArray[1] === "") return;
-  var selected_attribute = propArray[0];
-  var selected_value = propArray[1];
-  if ( selected_value === "\"\"") selected_value = "";
-  
-  _via_img_fn_list_html = [];
-  _via_img_fn_list_img_index_list = [];
-  _via_img_fn_list_html.push('<ul>');
-
-  if ( _via_attributes.region.hasOwnProperty(selected_attribute) ) {
-    var i;
-
-    for ( i=0; i < _via_image_filename_list.length; ++i ) {
-      var img_id = _via_image_id_list[i];
-      var add_to_list = false;
-      var idx;
-
-      for ( idx = 0; idx < _via_img_metadata[img_id].regions.length; ++idx ) {
-        if ( _via_img_metadata[img_id].regions[idx].region_attributes.hasOwnProperty(selected_attribute) ) {
-          if ( JSON.stringify(_via_img_metadata[img_id].regions[idx].region_attributes[selected_attribute]) === JSON.stringify(selected_value) ) {
-            add_to_list = true;
-            _via_img_fn_list_html.push( img_fn_list_ith_entry_html(i) );
-            _via_img_fn_list_img_index_list.push(i);
-            break;
-          }
-        }
-      }
-    }
-  }
-  _via_img_fn_list_html.push('</ul>');
-  img_fn_list.innerHTML = _via_img_fn_list_html.join('');
-  img_fn_list_scroll_to_current_file();
-}
-
-function is_region_annotation_missing(img_id) {
-  var region_attribute;
-  var i;
-  for ( i = 0; i < _via_img_metadata[img_id].regions.length; ++i ) {
-    for ( region_attribute in _via_attributes['region'] ) {
-      if ( _via_img_metadata[img_id].regions[i].region_attributes.hasOwnProperty(region_attribute) ) {
-        if ( _via_img_metadata[img_id].regions[i].region_attributes[region_attribute] === '' ) {
-          return true;
-        }
-      } else {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-function is_file_annotation_missing(img_id) {
-  var file_attribute;
-  for ( file_attribute in _via_attributes['file'] ) {
-    if ( _via_img_metadata[img_id].file_attributes.hasOwnProperty(file_attribute) ) {
-      if ( _via_img_metadata[img_id].file_attributes[file_attribute] === '' ) {
-        return true;
-      }
-    } else {
-      return true;
-    }
-  }
-  return false;
-}
-
-function img_fn_list_ith_entry_selected(img_index, is_selected) {
-  if ( is_selected ) {
-    img_fn_list_ith_entry_add_css_class(img_index, 'sel');
-  } else {
-    img_fn_list_ith_entry_remove_css_class(img_index, 'sel');
-  }
-}
-
-function img_fn_list_ith_entry_error(img_index, is_error) {
-  if ( is_error ) {
-    img_fn_list_ith_entry_add_css_class(img_index, 'error');
-  } else {
-    img_fn_list_ith_entry_remove_css_class(img_index, 'error');
-  }
-}
-
-function img_fn_list_ith_entry_add_css_class(img_index, classname) {
-  var li = document.getElementById('fl' + img_index);
-  if ( li && ! li.classList.contains(classname)  ) {
-    li.classList.add(classname);
-  }
-}
-
-function img_fn_list_ith_entry_remove_css_class(img_index, classname) {
-  var li = document.getElementById('fl' + img_index);
-  if ( li && li.classList.contains(classname) ) {
-    li.classList.remove(classname);
-  }
-}
-
-function img_fn_list_clear_all_style() {
-  var cn = document.getElementById('img_fn_list').childNodes[0].childNodes;
-  var i, j;
-  var n = cn.length;
-  var nclass;
-  for ( i = 0; i < n; ++i ) {
-    //cn[i].classList = []; // throws error in Edge browser
-    nclass = cn[i].classList.length;
-    if ( nclass ) {
-      for ( j = 0; j < nclass; ++j ) {
-        cn[i].classList.remove( cn[i].classList.item(j) );
-      }
-    }
-  }
-}
-
-function img_fn_list_clear_css_classname(classname) {
-  var cn = document.getElementById('img_fn_list').childNodes[0].childNodes;
-  var i;
-  var n = cn.length;
-  for ( i = 0; i < n; ++i ) {
-    if ( cn[i].classList.contains(classname) ) {
-      cn[i].classList.remove(classname);
-    }
-  }
-}
-
-function img_fn_list_ith_entry_html(i) {
-  var htmli = '';
-  var filename = _via_image_filename_list[i];
-  if ( is_url(filename) ) {
-    filename = filename.substr(0,4) + '...' + get_filename_from_url(filename);
-  }
-
-  htmli += '<li id="fl' + i + '"';
-    if ( i === _via_image_index ) {
-      // highlight the current entry
-      htmli += ' class="sel"';
-    }
-  htmli += ' onclick="jump_to_image(' + (i) + ')" title="' + _via_image_filename_list[i] + '">[' + (i+1) + '] ' + decodeURIComponent(filename) + '</li>';
-  return htmli;
-}
-
-function img_fn_list_generate_html(regex) {
-  _via_img_fn_list_html = [];
-  _via_img_fn_list_img_index_list = [];
-  _via_img_fn_list_html.push('<ul>');
-  for ( var i=0; i < _via_image_filename_list.length; ++i ) {
-    var filename = _via_image_filename_list[i];
-    if ( filename.match(regex) !== null ) {
-      _via_img_fn_list_html.push( img_fn_list_ith_entry_html(i) );
-      _via_img_fn_list_img_index_list.push(i);
-    }
-  }
-  _via_img_fn_list_html.push('</ul>');
-}
-
-function img_fn_list_scroll_to_current_file() {
-  img_fn_list_scroll_to_file( _via_image_index );
-}
-
-function img_fn_list_scroll_to_file(file_index) {
-  if( _via_img_fn_list_img_index_list.includes(file_index) ) {
-    var sel_file     = document.getElementById( 'fl' + file_index );
-    var panel_height = img_fn_list.clientHeight - 20;
-    var window_top    = img_fn_list.scrollTop;
-    var window_bottom = img_fn_list.scrollTop + panel_height
-    if ( sel_file.offsetTop > window_top ) {
-      if ( sel_file.offsetTop > window_bottom ) {
-        img_fn_list.scrollTop = sel_file.offsetTop;
-      }
-    } else {
-      img_fn_list.scrollTop = sel_file.offsetTop - panel_height;
-    }
-  }
-}
-
-function toggle_img_fn_list_visibility() {
-  leftsidebar_show();
-  document.getElementById('img_fn_list_panel').classList.toggle('show');
-  document.getElementById('project_panel_title').classList.toggle('active');
-}
-
-// this vertical spacer is needed to allow scrollbar to show
-// items like Keyboard Shortcut hidden under the attributes panel
-function update_vertical_space() {
-  var panel = document.getElementById('vertical_space');
 }
 
 //
@@ -3125,10 +2481,7 @@ function annotation_editor_show() {
   ae.setAttribute('id', 'annotation_editor');
 
   if ( _via_annotation_editor_mode === VIA_ANNOTATION_EDITOR_MODE.SINGLE_REGION ) {
-    if ( _via_settings.ui.image.on_image_annotation_editor_placement === VIA_ANNOTATION_EDITOR_PLACEMENT.DISABLE ) {
-      return;
-    }
-
+    
     // only display on-image annotation editor if
     // - region attribute are defined
     // - region is selected
@@ -3138,14 +2491,12 @@ function annotation_editor_show() {
       ae.classList.add('force_small_font');
       ae.classList.add('display_area_content'); // to enable automatic hiding of this content
       // add annotation editor to image_panel
-      if ( _via_settings.ui.image.on_image_annotation_editor_placement === VIA_ANNOTATION_EDITOR_PLACEMENT.NEAR_REGION ) {
+     
         var html_position = annotation_editor_get_placement(_via_user_sel_region_id);
         ae.style.top = html_position.top;
         ae.style.left = html_position.left;
-      }
       _via_display_area.appendChild(ae);
       annotation_editor_update_content();
-      update_vertical_space();
     }
   }
 }
@@ -3907,12 +3258,10 @@ function project_file_load_on_fail(img_index) {
   var img_id = _via_image_id_list[img_index];
   _via_img_src[img_id] = '';
   _via_image_load_error[img_index] = true;
-  img_fn_list_ith_entry_error(img_index, true);
 }
 
 function project_file_load_on_success(img_index) {
   _via_image_load_error[img_index] = false;
-  img_fn_list_ith_entry_error(img_index, false);
 }
 
 function project_import_attributes_from_json(data) {
@@ -4157,14 +3506,12 @@ function _via_show_img(img_index) {
     }, function(err_img_index) {
       _via_is_loading_current_image = false;
       img_loading_spinbar(img_index, false);
-      show_page_404(img_index);
       console.log('_via_img_buffer_add_image() failed for file: ' + _via_image_filename_list[err_img_index]);
     });
   }
 }
 
 function _via_buffer_hide_current_image() {
-  img_fn_list_ith_entry_selected(_via_image_index, false);
   _via_clear_reg_canvas(); // clear old region shapes
   if ( _via_current_image ) {
     _via_current_image.classList.remove('visible');
@@ -4249,10 +3596,6 @@ function _via_show_img_from_buffer(img_index) {
     // ensure that all the canvas are visible
     set_display_area_content( VIA_DISPLAY_AREA_CONTENT_NAME.IMAGE );
 
-    // update img_fn_list
-    img_fn_list_ith_entry_selected(_via_image_index, true);
-    img_fn_list_scroll_to_current_file();
-
     // refresh the annotations panel
     annotation_editor_update_content();
 
@@ -4302,7 +3645,6 @@ function _via_img_buffer_add_image(img_index) {
         img_stat_set(img_index, [bimg.naturalWidth, bimg.naturalHeight]);
         _via_img_panel.insertBefore(bimg, _via_reg_canvas);
         project_file_load_on_success(img_index);
-        img_fn_list_ith_entry_add_css_class(img_index, 'buffered')
         // add timestamp so that we can apply Least Recently Used (LRU)
         // scheme to remove elements when buffer is full
         var arr_index = _via_buffer_img_index_list.length;
@@ -4344,7 +3686,6 @@ function _via_img_buffer_add_image(img_index) {
         _via_img_panel.insertBefore(bimg, _via_reg_canvas);
 
         project_file_load_on_success(img_index);
-        img_fn_list_ith_entry_add_css_class(img_index, 'buffered')
         // add timestamp so that we can apply Least Recently Used (LRU)
         // scheme to remove elements when buffer is full
         var arr_index = _via_buffer_img_index_list.length;
@@ -4460,8 +3801,6 @@ function _via_buffer_remove( buffer_index ) {
     _via_buffer_img_index_list.splice(buffer_index, 1);
     _via_buffer_img_shown_timestamp.splice(buffer_index, 1);
     _via_img_panel.removeChild(bimg);
-
-    img_fn_list_ith_entry_remove_css_class(img_index, 'buffered')
   }
 }
 
@@ -4550,22 +3889,6 @@ function _via_buffer_get_current_preload_list() {
 // find location of file
 //
 
-//
-// page 404 (file not found)
-//
-function show_page_404(img_index) {
-  _via_buffer_hide_current_image();
-
-  set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_404);
-
-  _via_image_index = img_index;
-  _via_image_id = _via_image_id_list[_via_image_index];
-  _via_current_image_loaded = false;
-  img_fn_list_ith_entry_selected(_via_image_index, true);
-
-  document.getElementById('page_404_filename').innerHTML = '[' + (_via_image_index+1) + ']' + _via_img_metadata[_via_image_id].filename;
-}
-
 
 //
 // utils
@@ -4580,9 +3903,6 @@ function is_url( s ) {
   }
 }
 
-function get_filename_from_url( url ) {
-  return url.substring( url.lastIndexOf('/') + 1 );
-}
 
 function fixfloat(x) {
   return parseFloat( x.toFixed(VIA_FLOAT_PRECISION) );
@@ -4656,86 +3976,6 @@ function array_intersect( array_list ) {
     }
   }
   return intersect;
-}
-
-function generate_img_index_list(input) {
-  var all_img_index_list = [];
-
-  // condition: count format a,b
-  var count_format_img_index_list = [];
-  if ( input.prev_next_count.value !== '' ) {
-    var prev_next_split = input.prev_next_count.value.split(',');
-    if ( prev_next_split.length === 2 ) {
-      var prev = parseInt( prev_next_split[0] );
-      var next = parseInt( prev_next_split[1] );
-      var i;
-      for ( i = (_via_image_index - prev); i <= (_via_image_index + next); i++ ) {
-        count_format_img_index_list.push(i);
-      }
-    }
-  }
-  if ( count_format_img_index_list.length !== 0 ) {
-    all_img_index_list.push(count_format_img_index_list);
-  }
-
-  //condition: image index list expression
-  var expr_img_index_list = [];
-  if ( input.img_index_list.value !== '' ) {
-    var img_index_expr = input.img_index_list.value.split(',');
-    if ( img_index_expr.length !== 0 ) {
-      var i;
-      for ( i = 0; i < img_index_expr.length; ++i ) {
-        if ( img_index_expr[i].includes('-') ) {
-          var ab = img_index_expr[i].split('-');
-          var a = parseInt( ab[0] ) - 1; // 0 based indexing
-          var b = parseInt( ab[1] ) - 1;
-          var j;
-          for ( j = a; j <= b; ++j ) {
-            expr_img_index_list.push(j);
-          }
-        } else {
-          expr_img_index_list.push( parseInt(img_index_expr[i]) - 1 );
-        }
-      }
-    }
-  }
-  if ( expr_img_index_list.length !== 0 ) {
-    all_img_index_list.push(expr_img_index_list);
-  }
-
-
-  // condition: regular expression
-  var regex_img_index_list = [];
-  if ( input.regex.value !== '' ) {
-    var regex = input.regex.value;
-    for ( var i=0; i < _via_image_filename_list.length; ++i ) {
-      var filename = _via_image_filename_list[i];
-      if ( filename.match(regex) !== null ) {
-        regex_img_index_list.push(i);
-      }
-    }
-  }
-  if ( regex_img_index_list.length !== 0 ) {
-    all_img_index_list.push(regex_img_index_list);
-  }
-
-  var intersect = array_intersect(all_img_index_list);
-  return intersect;
-}
-
-if ( ! _via_is_debug_mode ) {
-  // warn user of possible loss of data
-  window.onbeforeunload = function (e) {
-    e = e || window.event;
-
-    // For IE and Firefox prior to version 4
-    if (e) {
-      e.returnValue = 'Did you save your data?';
-    }
-
-    // For Safari
-    return 'Did you save your data?';
-  };
 }
 
 //

@@ -1,44 +1,33 @@
 import React, { useRef, useEffect, useState } from 'react'
-import Image from '../assets/swan.jpg'
 
-const Canvas = props => {
+const Canvas = (file) => {  
   
-    const [imageWidth, setImageWidth] = useState(0);
-    const canvasRef = useRef(null)
-    const imageRef = useRef(null)
-    
-    const draw = (ctx, frameCount) => {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-        ctx.fillStyle = '#000000'
-        ctx.beginPath()
-        ctx.arc(50, 100, 20*Math.sin(frameCount*0.05)**2, 0, 2*Math.PI)
-        ctx.fill()
-    }
-    
-    useEffect(() => {
-        console.log(imageWidth)
-        const canvas = canvasRef.current
-        const context = canvas.getContext('2d')
-        let frameCount = 0
-        let animationFrameId
-        
-        const render = () => {
-        frameCount++
-        draw(context, frameCount)
-        animationFrameId = window.requestAnimationFrame(render)
-        }
-        render()
-        
-        return () => {
-        window.cancelAnimationFrame(animationFrameId)
-        }
-    }, [draw, imageWidth])
-    
+  const [size, setSize] = useState({width: 1, height:1})
+  const canvaRef = useRef(null)
+
+  useEffect(()=>{
+  },[])
+
+  const getDimensions = (img)=>{
+    setSize({
+      width: img.nativeEvent.srcElement.naturalWidth,
+      height: img.nativeEvent.srcElement.naturalHeight,
+    })
+  }
+
+  const mouseDownHandler = (e)=>{
+    var rect = canvaRef.current.getBoundingClientRect();
+    console.log("clicked")
+    e.stopPropagation()
+    console.log("x:",e.clientX - rect.left, " Y:", e.clientY - rect.top)
+  }
+
+
   return (
-    <>
-        <div className='work_area'>
-        <img className="main_img" src={Image} ref={imageRef} onLoad={(e)=>{setImageWidth(e)}} alt="no image"/> 
-        <canvas className='main_canvas' ref={canvasRef} {...props}>Sorry, Canvas functionality is not supported.</canvas>
+    <> 
+        <div className="work_area">
+          <img className="main_img" onLoad={(e)=>{getDimensions(e)}} src={file["file"]} alt="no image"/> 
+          <canvas className='main_canvas' onMouseDown={(e)=>{mouseDownHandler(e)}} ref={canvaRef} width={size.width} height={size.height}>Sorry, Canvas functionality is not supported.</canvas>
         </div>
     </>
   )
