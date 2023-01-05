@@ -33,18 +33,6 @@
           <rect width="80" height="100" x="265" y="40" stroke="yellow" fill="none" stroke-width="2"></rect>
           <text x="265" y="30" font-family="'Comic Sans MS', cursive, sans-serif" font-size="18" fill="yellow">Annotator</text>
         </symbol>
-        <symbol id="shape_rectangle">
-          <title>Rectangular region shape</title>
-          <rect width="20" height="12" x="6" y="10" stroke-width="2"></rect>
-        </symbol>
-        <symbol id="shape_circle">
-          <title>Circular region shape</title>
-          <circle r="10" cx="16" cy="16" stroke-width="2"></circle>
-        </symbol>
-        <symbol id="shape_ellipse">
-          <title>Elliptical region shape</title>
-          <ellipse rx="12" ry="8" cx="16" cy="16" stroke-width="2"></ellipse>
-        </symbol>
         <symbol id="shape_polygon">
           <title>Polygon region shape</title>
           <path d="M 15.25,2.2372 3.625,11.6122 6,29.9872 l 20.75,-9.625 2.375,-14.75 z" stroke-width="2"></path>
@@ -96,8 +84,6 @@
         <button class="leftsidebar_accordion active">Region Shape</button>
         <div class="leftsidebar_accordion_panel show">
           <ul class="region_shape">
-            <li id="region_shape_circle" onclick="select_region_shape('circle')" title="Circle (Shortcut key 2)"><svg height="32" viewbox="0 0 32 32"><use xlink:href="#shape_circle"></use></svg></li>
-            <li id="region_shape_ellipse" onclick="select_region_shape('ellipse')" title="Ellipse (Shortcut key 3)"><svg height="32" viewbox="0 0 32 32"><use xlink:href="#shape_ellipse"></use></svg></li>
             <li id="region_shape_polygon" onclick="select_region_shape('polygon')" title="Polygon (Shortcut key 4)"><svg height="32" viewbox="0 0 32 32"><use xlink:href="#shape_polygon"></use></svg></li>
           </ul>
           <div id="region_info">&nbsp;</div>

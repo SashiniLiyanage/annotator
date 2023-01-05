@@ -53,7 +53,6 @@ var VIA_VERSION      = '2.0.12';
 var VIA_NAME         = 'VGG Image Annotator';
 var VIA_SHORT_NAME   = 'VIA';
 var VIA_REGION_SHAPE = {
-                         CIRCLE:'circle',
                          ELLIPSE:'ellipse',
                          POLYGON:'polygon'
                        };
@@ -887,22 +886,6 @@ function via_region_shape_to_coco_annotation(shape_attributes) {
   var annotation = { 'segmentation':[[]], 'area':[], 'bbox':[], 'iscrowd':0 };
 
   switch(shape_attributes['name']) {
-  case 'circle':
-    var a,b;
-    a = shape_attributes['r'];
-    b = shape_attributes['r'];
-    var theta_to_radian = Math.PI/180;
-
-    for ( var theta = 0; theta < 360; theta = theta + VIA_POLYGON_SEGMENT_SUBTENDED_ANGLE ) {
-      var theta_radian = theta * theta_to_radian;
-      var x = shape_attributes['cx'] + a * Math.cos(theta_radian);
-      var y = shape_attributes['cy'] + b * Math.sin(theta_radian);
-      annotation['segmentation'][0].push( fixfloat(x), fixfloat(y) );
-    }
-    annotation['bbox'] = polygon_to_bbox(annotation['segmentation'][0]);
-    annotation['area'] = annotation['bbox'][2] * annotation['bbox'][3];
-    break;
-
   case 'ellipse':
     var a,b;
     a = shape_attributes['rx'];
@@ -1036,15 +1019,6 @@ function _via_load_canvas_regions() {
     _via_canvas_regions.push(region_i);
 
     switch(_via_canvas_regions[i].shape_attributes['name']) {
-    case VIA_REGION_SHAPE.CIRCLE:
-      var cx = regions[i].shape_attributes['cx'] / _via_canvas_scale;
-      var cy = regions[i].shape_attributes['cy'] / _via_canvas_scale;
-      var r  = regions[i].shape_attributes['r']  / _via_canvas_scale;
-      _via_canvas_regions[i].shape_attributes['cx'] = Math.round(cx);
-      _via_canvas_regions[i].shape_attributes['cy'] = Math.round(cy);
-      _via_canvas_regions[i].shape_attributes['r'] = Math.round(r);
-      break;
-
     case VIA_REGION_SHAPE.ELLIPSE:
       var cx = regions[i].shape_attributes['cx'] / _via_canvas_scale;
       var cy = regions[i].shape_attributes['cy'] / _via_canvas_scale;
@@ -1299,15 +1273,6 @@ function _via_reg_canvas_mouseup_handler(e) {
     var canvas_attr = _via_canvas_regions[region_id].shape_attributes;
 
     switch (canvas_attr['name']) {
-    case VIA_REGION_SHAPE.CIRCLE:
-      var dx = Math.abs(canvas_attr['cx'] - _via_current_x);
-      var dy = Math.abs(canvas_attr['cy'] - _via_current_y);
-      var new_r = Math.sqrt( dx*dx + dy*dy );
-
-      image_attr['r'] = fixfloat(new_r * _via_canvas_scale);
-      canvas_attr['r'] = Math.round( image_attr['r'] / _via_canvas_scale);
-      break;
-
     case VIA_REGION_SHAPE.ELLIPSE:
       var new_rx = canvas_attr['rx'];
       var new_ry = canvas_attr['ry'];
@@ -1483,24 +1448,6 @@ function _via_reg_canvas_mouseup_handler(e) {
 
     if ( region_dx > VIA_REGION_MIN_DIM && region_dy > VIA_REGION_MIN_DIM ) { // avoid regions with 0 dim
       switch(_via_current_shape) {
-      case VIA_REGION_SHAPE.CIRCLE:
-        var cx = Math.round(region_x0 * _via_canvas_scale);
-        var cy = Math.round(region_y0 * _via_canvas_scale);
-        var r  = Math.round( Math.sqrt(region_dx*region_dx + region_dy*region_dy) * _via_canvas_scale );
-
-        original_img_region.shape_attributes['name'] = 'circle';
-        original_img_region.shape_attributes['cx'] = cx;
-        original_img_region.shape_attributes['cy'] = cy;
-        original_img_region.shape_attributes['r'] = r;
-
-        canvas_img_region.shape_attributes['name'] = 'circle';
-        canvas_img_region.shape_attributes['cx'] = Math.round( cx / _via_canvas_scale );
-        canvas_img_region.shape_attributes['cy'] = Math.round( cy / _via_canvas_scale );
-        canvas_img_region.shape_attributes['r'] = Math.round( r / _via_canvas_scale );
-
-        new_region_added = true;
-        break;
-
       case VIA_REGION_SHAPE.ELLIPSE:
         var cx = Math.round(region_x0 * _via_canvas_scale);
         var cy = Math.round(region_y0 * _via_canvas_scale);
@@ -1584,12 +1531,6 @@ function _via_reg_canvas_mousemove_handler(e) {
     if ( rf != null && _via_user_sel_region_id !== -1) {
       var canvas_attr = _via_canvas_regions[_via_user_sel_region_id].shape_attributes;
       switch (canvas_attr['name']) {
-      case VIA_REGION_SHAPE.CIRCLE:
-        var rf = document.getElementById('region_info');
-        var attr = _via_canvas_regions[_via_user_sel_region_id].shape_attributes;
-        rf.innerHTML +=  ',' + ' Radius:' + attr['r'];
-        break;
-
       case VIA_REGION_SHAPE.ELLIPSE:
         var rf = document.getElementById('region_info');
         var attr = _via_canvas_regions[_via_user_sel_region_id].shape_attributes;
@@ -1679,16 +1620,6 @@ function _via_reg_canvas_mousemove_handler(e) {
     _via_reg_ctx.strokeStyle = VIA_THEME_BOUNDARY_FILL_COLOR;
 
     switch (_via_current_shape ) {
-    case VIA_REGION_SHAPE.CIRCLE:
-      var circle_radius = Math.round(Math.sqrt( dx*dx + dy*dy ));
-      _via_draw_circle_region(region_x0, region_y0, circle_radius, false);
-
-      // display the current region info
-      if ( rf != null) {
-        rf.innerHTML +=  ',' + ' Radius:' + circle_radius;
-      }
-      break;
-
     case VIA_REGION_SHAPE.ELLIPSE:
       _via_draw_ellipse_region(region_x0, region_y0, dx, dy, 0, false);
 
@@ -1720,21 +1651,6 @@ function _via_reg_canvas_mousemove_handler(e) {
     var region_id = _via_region_edge[0];
     var attr = _via_canvas_regions[region_id].shape_attributes;
     switch (attr['name']) {
-    case VIA_REGION_SHAPE.CIRCLE:
-      var dx = Math.abs(attr['cx'] - _via_current_x);
-      var dy = Math.abs(attr['cy'] - _via_current_y);
-      var new_r = Math.sqrt( dx*dx + dy*dy );
-      _via_draw_circle_region(attr['cx'],
-                              attr['cy'],
-                              new_r,
-                              true);
-      if ( rf != null) {
-        var curr_texts = rf.innerHTML.split(",");
-        rf.innerHTML = "";
-        rf.innerHTML +=  curr_texts[0] + ',' + curr_texts[1] + ',' + ' Radius:' + Math.round(new_r);
-      }
-      break;
-
     case VIA_REGION_SHAPE.ELLIPSE:
       var new_rx = attr['rx'];
       var new_ry = attr['ry'];
@@ -1807,13 +1723,6 @@ function _via_reg_canvas_mousemove_handler(e) {
     var attr = _via_canvas_regions[_via_user_sel_region_id].shape_attributes;
 
     switch (attr['name']) {
-    case VIA_REGION_SHAPE.CIRCLE:
-      _via_draw_circle_region(attr['cx'] + move_x,
-                              attr['cy'] + move_y,
-                              attr['r'],
-                              true);
-      break;
-
     case VIA_REGION_SHAPE.ELLIPSE:
       if (typeof(attr['theta']) === 'undefined') { attr['theta'] = 0; }
       _via_draw_ellipse_region(attr['cx'] + move_x,
@@ -1877,7 +1786,6 @@ function _via_move_selected_regions(move_x, move_y) {
 
 function _via_validate_move_region(x, y, canvas_attr) {
   switch( canvas_attr['name'] ) {
-    case VIA_REGION_SHAPE.CIRCLE:
     case VIA_REGION_SHAPE.ELLIPSE:
     
     case VIA_REGION_SHAPE.POLYGON:
@@ -1895,7 +1803,6 @@ function _via_move_region(region_id, move_x, move_y) {
   var canvas_attr = _via_canvas_regions[region_id].shape_attributes;
 
   switch( canvas_attr['name'] ) {
-  case VIA_REGION_SHAPE.CIRCLE: // Fall-through
   case VIA_REGION_SHAPE.ELLIPSE: // Fall-through
   
   case VIA_REGION_SHAPE.POLYGON:
@@ -1992,13 +1899,6 @@ function draw_all_regions() {
     }
 
     switch( attr['name'] ) {
-    case VIA_REGION_SHAPE.CIRCLE:
-      _via_draw_circle_region(attr['cx'],
-                              attr['cy'],
-                              attr['r'],
-                              is_selected);
-      break;
-
     case VIA_REGION_SHAPE.ELLIPSE:
       if (typeof(attr['theta']) === 'undefined') { attr['theta'] = 0; }
       _via_draw_ellipse_region(attr['cx'],
@@ -2030,46 +1930,6 @@ function _via_draw_control_point(cx, cy) {
   _via_reg_ctx.fillStyle = VIA_THEME_CONTROL_POINT_COLOR;
   _via_reg_ctx.globalAlpha = 1.0;
   _via_reg_ctx.fill();
-}
-
-function _via_draw_circle_region(cx, cy, r, is_selected) {
-  if (is_selected) {
-    _via_draw_circle(cx, cy, r);
-
-    _via_reg_ctx.strokeStyle = VIA_THEME_SEL_REGION_FILL_BOUNDARY_COLOR;
-    _via_reg_ctx.lineWidth   = VIA_THEME_REGION_BOUNDARY_WIDTH/2;
-    _via_reg_ctx.stroke();
-
-    _via_reg_ctx.fillStyle   = VIA_THEME_SEL_REGION_FILL_COLOR;
-    _via_reg_ctx.globalAlpha = VIA_THEME_SEL_REGION_OPACITY;
-    _via_reg_ctx.fill();
-    _via_reg_ctx.globalAlpha = 1.0;
-
-    _via_draw_control_point(cx + r, cy);
-  } else {
-    // draw a fill line
-    _via_reg_ctx.lineWidth   = VIA_THEME_REGION_BOUNDARY_WIDTH/2;
-    _via_draw_circle(cx, cy, r);
-    _via_reg_ctx.stroke();
-
-    if ( r > VIA_THEME_REGION_BOUNDARY_WIDTH ) {
-      // draw a boundary line on both sides of the fill line
-      _via_reg_ctx.strokeStyle = VIA_THEME_BOUNDARY_LINE_COLOR;
-      _via_reg_ctx.lineWidth   = VIA_THEME_REGION_BOUNDARY_WIDTH/4;
-      _via_draw_circle(cx, cy,
-                       r - VIA_THEME_REGION_BOUNDARY_WIDTH/2);
-      _via_reg_ctx.stroke();
-      _via_draw_circle(cx, cy,
-                       r + VIA_THEME_REGION_BOUNDARY_WIDTH/2);
-      _via_reg_ctx.stroke();
-    }
-  }
-}
-
-function _via_draw_circle(cx, cy, r) {
-  _via_reg_ctx.beginPath();
-  _via_reg_ctx.arc(cx, cy, r, 0, 2*Math.PI, false);
-  _via_reg_ctx.closePath();
 }
 
 function _via_draw_ellipse_region(cx, cy, rx, ry, rr, is_selected) {
@@ -2253,13 +2113,6 @@ function get_region_bounding_box(region) {
   var bbox = new Array(4);
 
   switch( d['name'] ) {
-  case 'circle':
-    bbox[0] = d['cx'] - d['r'];
-    bbox[1] = d['cy'] - d['r'];
-    bbox[2] = d['cx'] + d['r'];
-    bbox[3] = d['cy'] + d['r'];
-    break;
-
   case 'ellipse':
     let radians = d['theta'];
     let radians90 = radians + Math.PI / 2;
@@ -2352,13 +2205,6 @@ function is_inside_this_region(px, py, region_id) {
   var attr   = _via_canvas_regions[region_id].shape_attributes;
   var result = false;
   switch ( attr['name'] ) {
-  case VIA_REGION_SHAPE.CIRCLE:
-    result = is_inside_circle(attr['cx'],
-                              attr['cy'],
-                              attr['r'],
-                              px, py);
-    break;
-
   case VIA_REGION_SHAPE.ELLIPSE:
     result = is_inside_ellipse(attr['cx'],
                                attr['cy'],
@@ -2376,12 +2222,6 @@ function is_inside_this_region(px, py, region_id) {
     break;
   }
   return result;
-}
-
-function is_inside_circle(cx, cy, r, px, py) {
-  var dx = px - cx;
-  var dy = py - cy;
-  return (dx * dx + dy * dy) < r * r;
 }
 
 function is_inside_rect(x, y, w, h, px, py) {
@@ -2476,13 +2316,6 @@ function is_on_region_corner(px, py) {
     _via_region_edge[0] = i;
 
     switch ( attr['name'] ) {
-    case VIA_REGION_SHAPE.CIRCLE:
-      result = is_on_circle_edge(attr['cx'],
-                                 attr['cy'],
-                                 attr['r'],
-                                 px, py);
-      break;
-
     case VIA_REGION_SHAPE.ELLIPSE:
       result = is_on_ellipse_edge(attr['cx'],
                                   attr['cy'],
@@ -2513,37 +2346,6 @@ function is_on_region_corner(px, py) {
   }
   _via_region_edge[0] = -1;
   return _via_region_edge;
-}
-
-function is_on_circle_edge(cx, cy, r, px, py) {
-  var dx = cx - px;
-  var dy = cy - py;
-  if ( Math.abs(Math.sqrt( dx*dx + dy*dy ) - r) < VIA_REGION_EDGE_TOL ) {
-    var theta = Math.atan2( py - cy, px - cx );
-    if ( Math.abs(theta - (Math.PI/2)) < VIA_THETA_TOL ||
-         Math.abs(theta + (Math.PI/2)) < VIA_THETA_TOL) {
-      return 5;
-    }
-    if ( Math.abs(theta) < VIA_THETA_TOL ||
-         Math.abs(Math.abs(theta) - Math.PI) < VIA_THETA_TOL) {
-      return 6;
-    }
-
-    if ( theta > 0 && theta < (Math.PI/2) ) {
-      return 1;
-    }
-    if ( theta > (Math.PI/2) && theta < (Math.PI) ) {
-      return 4;
-    }
-    if ( theta < 0 && theta > -(Math.PI/2) ) {
-      return 2;
-    }
-    if ( theta < -(Math.PI/2) && theta > -Math.PI ) {
-      return 3;
-    }
-  } else {
-    return 0;
-  }
 }
 
 function is_on_ellipse_edge(cx, cy, rx, ry, rr, px, py) {
@@ -3693,10 +3495,6 @@ function annotation_editor_get_placement(region_id) {
   var r = _via_canvas_regions[region_id]['shape_attributes'];
   var shape = r['name'];
   switch( shape ) {
-  case 'circle':
-    html_position.top = r['cy'] + r['r'];
-    html_position.left = r['cx'];
-    break;
   case 'ellipse':
     html_position.top = r['cy'] + r['ry'] * Math.cos(r['theta']);
     html_position.left = r['cx'] - r['ry'] * Math.sin(r['theta']);
@@ -4581,10 +4379,6 @@ function _via_region( shape, id, data_img_space, view_scale_factor, view_offset_
 
   // set svg attributes for each shape
   switch( this.shape ) {
-  case "circle":
-    _via_region_circle.call( this );
-    this.svg_attributes = ['cx', 'cy', 'r'];
-    break;
   case "ellipse":
     _via_region_ellipse.call( this );
     this.svg_attributes = ['cx', 'cy', 'rx', 'ry','transform'];
@@ -4596,12 +4390,6 @@ function _via_region( shape, id, data_img_space, view_scale_factor, view_offset_
   case "polygon":
     _via_region_polygon.call( this );
     this.svg_attributes = ['points'];
-    break;
-  case "point":
-    _via_region_point.call( this );
-    // point is a special circle with minimal radius required for visualization
-    this.shape = 'circle';
-    this.svg_attributes = ['cx', 'cy', 'r'];
     break;
   }
 
@@ -4637,28 +4425,6 @@ _via_region.prototype.get_svg_string = function() {
     this.recompute_svg = false;
   }
   return this.svg_string;
-}
-
-///
-/// Region shape : circle
-///
-function _via_region_circle() {
-  this.is_inside  = _via_region_circle.prototype.is_inside;
-  this.is_on_edge = _via_region_circle.prototype.is_on_edge;
-  this.move       = _via_region_circle.prototype.move;
-  this.resize     = _via_region_circle.prototype.resize;
-  this.initialize = _via_region_circle.prototype.initialize;
-  this.dist_to_nearest_edge = _via_region_circle.prototype.dist_to_nearest_edge;
-}
-
-_via_region_circle.prototype.initialize = function() {
-  this.cx = this.dview[0];
-  this.cy = this.dview[1];
-  var dx = this.dview[2] - this.dview[0];
-  var dy = this.dview[3] - this.dview[1];
-  this.r  = Math.round( Math.sqrt(dx * dx + dy * dy) );
-  this.r2 = this.r * this.r;
-  this.recompute_svg = true;
 }
 
 
