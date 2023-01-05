@@ -9,12 +9,11 @@
 <body>
     Click to add points
     <canvas id="canvas" style="border: 1px solid black" width=300 height=300></canvas>
-
 <script>
     var ctx = canvas.getContext("2d");
-requestAnimationFrame(update)
+    
 
-mouse = {x : 0, y : 0, button : 0, lx : 0, ly : 0, update : true};
+var mouse = {x : 0, y : 0, button : 0, lx : 0, ly : 0, update : true};
 function mouseEvents(e){
 	const bounds = canvas.getBoundingClientRect();
 	mouse.x = e.pageX - bounds.left - scrollX;
@@ -75,7 +74,7 @@ const polygon = poly();
 var activePoint,cursor;
 var dragging= false;
 function update(){
-    if (mouse.update) {
+    if (true) {
         cursor = "crosshair";
         ctx.clearRect(0,0,canvas.width,canvas.height);
         if (!dragging) {  activePoint = polygon.closest(mouse) }
@@ -103,6 +102,8 @@ function update(){
     }
     requestAnimationFrame(update)
 }
+
+update()
 </script>
 </body>
 
