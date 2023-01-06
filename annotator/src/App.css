@@ -1,3 +1,9 @@
+:root{
+    --primary-color: rgb(60,140,236);
+    --secondary-color: rgb(235,235,236);
+    --light-color: rgb(168,199,236);
+}
+
 .main_canvas{
     position: absolute;
     top: 0;
@@ -6,5 +12,37 @@
 
 .work_area{
     position: relative; 
-    margin: 50px;
+    width: fit-content;
+    border: 5px solid rgba(0,0,0,0.4);
 }
+
+.collision_canvas{
+    opacity: 0.8;
+    position: absolute;
+}
+
+.main_img{
+    user-select: none;
+}
+
+.page_body{
+    display: flex;
+    justify-content: center;
+    padding: 30px;
+    padding-top: 50px;
+}
+
+.nav_bar{
+    height: 50px;
+    width: 100%;
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    background-color: var(--primary-color);
+    display: flex;
+    align-items: center;
+}
+
+.nav_button{color:var(--secondary-color);padding:10px;user-select: none;cursor: pointer;}
+.nav_button:hover{color:var(--light-color);}
