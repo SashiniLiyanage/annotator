@@ -1,17 +1,27 @@
-import React, { useRef, useEffect, useState } from 'react'
-import {Button} from '@mui/material';
-import mouth from '../assets/mouth.jpg'
+import React, { useRef, useEffect, useState } from 'react';
+import {Button, Stack,Drawer, IconButton} from '@mui/material';
+import mouth from '../assets/mouth.jpg';
+import icon from '../assets/note.png';
+import colorPallete from './colors'
+import {Preview,ZoomIn,CropFree,ZoomOut,Close, CancelOutlined} from '@mui/icons-material';
 
+const regionNames = ["teeth","Enemal","Hard Plate","Mole","Soft Plate","Tongue","Stain","Uvula","Gingiva","Lips"]
+const colors = colorPallete
 const mouse = {x : 0, y : 0, button : 0, cursor: 'crosshair'};
 var regions = []
 var isDragging = false;
 var isSelected = false;
 var isDrawing = true ;
+var isMoving = false;
 var polygon
 var canvas
 var ctx
-var  colCanvas 
+var colCanvas 
 var colctx
+var selectedRegion
+var defaultType = "Unknown"
+var defaultColor = 'rgb(0,0,0)'
+
 const point = (x,y) => ({x,y});
 
 function drawCircle(ctx, pos,size=4){
@@ -34,8 +44,11 @@ class Polygon{
     this.dragging = false;
     this.completed = false;
     this.markedForDeletion = false;
-    this.randomColors = [Math.floor(Math.random()*255),Math.floor(Math.random()*255),Math.floor(Math.random()*255)];
-    this.color = 'rgb(' + this.randomColors[0] + ', ' + this.randomColors[1] +',' + this.randomColors[2] + ')';
+    this.color = defaultColor;
+    this.transcolor =  defaultColor.replace(')', ', 0.6)').replace('rgb', 'rgba')
+    this.type = defaultType
+    //this.randomColors = [Math.floor(Math.random()*255),Math.floor(Math.random()*255),Math.floor(Math.random()*255)];
+    //this.color = 'rgb(' + this.randomColors[0] + ', ' + this.randomColors[1] +',' + this.randomColors[2] + ')';
   }
   addPoint(p){ 
     this.points.push(point(p.x,p.y)) 
@@ -50,14 +63,14 @@ class Polygon{
   draw() {
       this.ctx.beginPath();
       this.ctx.lineWidth = 1;
-      this.ctx.strokeStyle = "yellow";
-      this.ctx.fillStyle = "rgba(0,0,0,0.2)"
+      this.ctx.strokeStyle = this.color;
+      this.ctx.fillStyle = this.transcolor
       for (const p of this.points) { this.ctx.lineTo(p.x,p.y) }
       this.ctx.closePath();
-      for (const p of this.points) {
-        this.ctx.moveTo(p.x + 4,p.y);
-        this.ctx.arc(p.x,p.y,3,0,Math.PI *2);
-      }
+      // for (const p of this.points) {
+      //   this.ctx.moveTo(p.x + 4,p.y);
+      //   this.ctx.arc(p.x,p.y,3,0,Math.PI *2);
+      // }
       this.ctx.fill();
       this.ctx.stroke();
       
@@ -90,7 +103,7 @@ class Polygon{
       // line following the cursor
       if(!this.completed && this.points.length !== 0){
         isDrawing = true
-        this.ctx.strokeStyle = "yellow";
+        this.ctx.strokeStyle = this.color;
         this.ctx.beginPath();
         this.ctx.moveTo(mouse.x,mouse.y)
         this.ctx.lineTo(this.points[this.points.length-1].x,this.points[this.points.length-1].y)
@@ -121,13 +134,11 @@ class Polygon{
       }
       this.draw();
 
-      // draw circle on active point
-      if (this.activePoint && this.completed && this.isSelected) { 
-          mouse.cursor = "move";
-      }
-
+      // indicate selection
       if(this.isSelected){
         for (const p of this.points) { drawCircle(this.ctx, p) }
+        var inside = this.isPointInPoly(mouse)
+        if(inside || this.activePoint ) mouse.cursor = "move"
       }
 
       this.mouse.lx = mouse.x;
@@ -138,32 +149,53 @@ class Polygon{
 const Canvas = () => {  
   
   const [size, setSize] = useState({width: 1, height:1})
+  const [orginalSize, setOriginalSize] = useState({width: 1, height:1})
   const [showPoints, setShowPoints] = useState(false)
+  const [zoomLevel, setZoomLevel] = useState(1)
+  const [state, setState] = React.useState(false);
+
   const canvaRef = useRef(null)
   const colCanvasRef = useRef(null)
 
-  const showRegions = () =>{
+  const show_regions = () =>{
+    if(isDrawing) return;
+
     var coordinates = [];
+    var type = [];
     [...regions].forEach(region =>{
-      var pointArray = []
-      for (const p of region.points) {
-        pointArray.push(p.x,p.y)
+      if(region.completed){
+        var pointArray = []
+        for (const p of region.points) {
+          pointArray.push(Math.round(p.x /zoomLevel),Math.round(p.y /zoomLevel))
+        }
+        coordinates.push(pointArray.toString())
+        type.push(region.type)
       }
-      coordinates.push(pointArray)
     })
-   
+
     setShowPoints(
       coordinates.map((points, index) =>
-        <li key={index}>[{points.toString()}]</li>
+        <tr  key={index}>
+          <td>{type[index]}</td>
+          <td>{points}</td>
+        </tr>
       )
     )
+
+    if(coordinates.length === 0) return
+    setState(true)
   }
 
-  const keyPress = (e) =>{
-    if(e.key === "Enter") {
-  
-      showRegions();
+  const delete_selected = () =>{
+    if(selectedRegion){
+      selectedRegion.markedForDeletion = true;
+      isSelected = false;
+    }
+  }
 
+  const handle_keypress = (e) =>{
+    if(e.key === "Enter") {
+      
       [...regions].forEach(region => {
         if(region.points.length < 3) region.markedForDeletion = true;
         region.completed = true
@@ -175,18 +207,28 @@ const Canvas = () => {
     }
   
     if(e.key === "Delete") {
-      [...regions].forEach(region => {
-        if(region.isSelected) region.markedForDeletion = true
-      })
-  
-      polygon = new Polygon(ctx, colctx)
-      regions.push(polygon)
+      delete_selected()
     }
+
+  }
+
+  const deselect_all = (e) =>{
+    if (e.target.className !== 'page_body')  return;
+
+    if(selectedRegion){
+      selectedRegion.isSelected = false;
+      isSelected = false;
+    }
+
+    selectedRegion = null;
   }
 
   const handleSelect = () =>{
+
     isSelected = false;
-    
+    selectedRegion = null;
+
+  
     //if drawing don't select
     if(isDrawing) return
 
@@ -200,12 +242,14 @@ const Canvas = () => {
         // select only the closest region
         isSelected = true;
         regions[i].isSelected = true;
+        selectedRegion = regions[i]
         return
       // if a region is already selected that means
       // user needs to select another region or create a new region
       }else if(regions[i].isSelected){
         if(regions[i].isPointInPoly(mouse)) selectedIndex = i;
         regions[i].isSelected = false;
+        selectedRegion = null;
         break
       }
     }
@@ -215,25 +259,36 @@ const Canvas = () => {
       if((regions[i].isPointInPoly(mouse)) && regions[i].completed){
         regions[i].isSelected = true;
         isSelected = true;
+        selectedRegion = regions[i]
         break
       }
     }
-
-}
-
-const handleMouse = (e)=>{
- 
-  var rect = canvas.getBoundingClientRect();
-
-  mouse.x = Math.round(e.clientX - rect.left);
-  mouse.y = Math.round(e.clientY - rect.top);
-
-  if(e.type === "mousedown"){
-      handleSelect()     
   }
 
-  mouse.button = e.type === "mousedown" ? true : e.type === "mouseup" ? false : mouse.button;
-}
+  const handle_mouse = (e)=>{
+  
+    var rect = canvas.getBoundingClientRect();
+
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+
+    if(e.type === "dblclick"){
+      if(isSelected){
+        [...regions].forEach(region =>{
+          if(region.isSelected && region.isPointInPoly(mouse)){
+            isMoving = true
+          }
+        })
+    
+      }
+    }
+
+    if(e.type === "mousedown"){
+        handleSelect()    
+    }
+
+    mouse.button = e.type === "mousedown" ? true : e.type === "mouseup" ? false : mouse.button;
+  }
 
 
   useEffect(() => {
@@ -247,8 +302,8 @@ const handleMouse = (e)=>{
   polygon = new Polygon(ctx, colctx)
   regions.push(polygon)
 
-  window.addEventListener("keydown", keyPress);
-  window.addEventListener("keyup", keyPress);
+  window.addEventListener("keydown", handle_keypress);
+  window.addEventListener("keyup", handle_keypress);
 
   const annotate = ()=>{
       ctx.clearRect(0,0, canvas.width, canvas.height);
@@ -270,10 +325,92 @@ const handleMouse = (e)=>{
     };
   }, []);
  
+  // zoom in
+  const zoom_in = ()=>{
+    if(isDrawing || zoomLevel > 4) return
 
+    setSize({
+      width: orginalSize.width * zoomLevel *1.5,
+      height: orginalSize.height * zoomLevel *1.5
+    });
+    
+    [...regions].forEach(region =>{
+      var pointArray = []
+      for (const p of region.points) {
+        pointArray.push(point(p.x * 1.5 , p.y * 1.5))
+      }
+      region.points = pointArray
+    })
+   
+
+    setZoomLevel(zoomLevel*1.5)
+  }
+
+  // zoom out
+  const zoom_out = ()=>{
+    if(isDrawing || zoomLevel < 0.25) return
+    setSize({
+      width: orginalSize.width * zoomLevel /1.5 ,
+      height: orginalSize.height * zoomLevel /1.5
+    });
+    
+    [...regions].forEach(region =>{
+      var pointArray = []
+      for (const p of region.points) {
+        pointArray.push(point(p.x / 1.5 , p.y / 1.5))
+      }
+      region.points = pointArray
+    })
+
+    setZoomLevel(zoomLevel/1.5)
+  }
+
+  // zoom reset
+  const zoom_reset = ()=>{
+    if(isDrawing || zoomLevel === 1) return
+
+    setSize({
+      width: orginalSize.width ,
+      height: orginalSize.height
+    });
+    
+    [...regions].forEach(region =>{
+      var pointArray = []
+      for (const p of region.points) {
+        pointArray.push(point(p.x / zoomLevel , p.y / zoomLevel))
+      }
+      region.points = pointArray
+    })
+
+    setZoomLevel(1)
+  }
+  
+  //set types
+  const set_types = (colorId, name)=>{
+    defaultColor = colors[colorId].main;
+    defaultType = name;
+
+    [...regions].forEach(region => {
+      if(!region.completed){
+        region.color = defaultColor
+        region.transcolor = defaultColor.replace(')', ', 0.6)').replace('rgb', 'rgba')
+        region.type = name
+      }
+    });
+
+    if(selectedRegion){
+      selectedRegion.color = defaultColor
+      selectedRegion.transcolor = defaultColor.replace(')', ', 0.6)').replace('rgb', 'rgba')
+      selectedRegion.type = name
+    }
+  }
 
   // get the size of the image
-  const getDimensions = (img)=>{
+  const get_dimensions = (img)=>{
+    setOriginalSize({
+      width: img.nativeEvent.srcElement.naturalWidth,
+      height: img.nativeEvent.srcElement.naturalHeight,
+    })
     setSize({
       width: img.nativeEvent.srcElement.naturalWidth,
       height: img.nativeEvent.srcElement.naturalHeight,
@@ -281,27 +418,57 @@ const handleMouse = (e)=>{
   }
 
   // clear all regions
-  const clearAll = ()=>{
+  const clear_all = ()=>{
     [...regions].forEach(region => region.markedForDeletion = true);
     polygon = new Polygon(ctx, colctx)
     regions.push(polygon)
   }
 
   return (
-    <>
+    <div className='body'>
     <div className='nav_bar'>
-    <div className='nav_button' onClick={clearAll} title="clear all">Clear All</div>
-    <div className='nav_button' onClick={showRegions} title="Show Regions">Show Regions</div>
+    <div className='icon'>
+      <img src={icon} alt='icon'></img>
     </div>
-    <div className='page_body'>
+    <IconButton onClick={show_regions} sx={{color: 'white', ml: 1}} title="Show Regions"><Preview/></IconButton>
+    <IconButton onClick={zoom_in} sx={{color: 'white', ml: 1}}  title="Zoom In"><ZoomIn/></IconButton>
+    <IconButton onClick={zoom_out} sx={{color: 'white', ml: 1}}  title="Zoom Out"><ZoomOut/></IconButton>
+    <IconButton onClick={zoom_reset} sx={{color: 'white', ml: 1}}  title="Zoom Reset"><CropFree/></IconButton>
+    <IconButton onClick={delete_selected} sx={{color: 'white', ml: 1}}  title="Clear Selected"><Close/></IconButton>
+    <IconButton onClick={clear_all} sx={{color: 'white', ml: 1}} title="Clear All"><CancelOutlined/></IconButton>
+    </div>
+    <div className='page_body' onMouseDown={(e)=>{deselect_all(e)}}>
+        <div className='side_bar'>
+        <Stack direction="column" spacing={1} sx={{padding: "10px 5px"}}>
+        {regionNames.map((name, index) =>{
+            var colorId = 'r'+index.toString()
+            return (<Button key={index} variant='contained' color={colorId} onClick={()=>set_types(colorId, name)} value={name} size='small' fullWidth>{name}</Button>)
+        })}
+        </Stack>
+        </div>
         <div className="work_area">
           <canvas className='collision_canvas' ref={colCanvasRef} width={size.width} height={size.height}/>
-          <canvas className='main_canvas' onDoubleClick={(e)=>handleMouse(e)} onMouseMove={(e)=>{handleMouse(e)}} onMouseDown={(e)=>{handleMouse(e)}} onMouseUp={(e)=>{handleMouse(e)}} ref={canvaRef} width={size.width} height={size.height}>Sorry, Canvas functionality is not supported.</canvas>
-          <img className="main_img" onLoad={(e)=>{getDimensions(e)}} src={mouth} alt="failed to load"/> 
+          <canvas className='main_canvas' onDoubleClick={(e)=>handle_mouse(e)} onMouseMove={(e)=>{handle_mouse(e)}} onMouseDown={(e)=>{handle_mouse(e)}} onMouseUp={(e)=>{handle_mouse(e)}} ref={canvaRef} width={size.width} height={size.height}>Sorry, Canvas functionality is not supported.</canvas>
+          <img className="main_img" onLoad={(e)=>{get_dimensions(e)}}  width={size.width} height={size.height} src={mouth} alt="failed to load"/> 
         </div>
+          <Drawer
+            anchor='bottom'
+            open={state}
+            onClose={()=>{setState(false)}}
+          >
+            <div style={{display: "flex", justifyContent: "flex-end"}}><IconButton aria-label="delete" onClick={()=>setState(false)} color="primary"><Close/></IconButton></div>
+            <table className='show_regions'>
+              <tbody>
+                <tr>
+                  <th>Region</th>
+                  <th>Coordinates</th>
+                </tr>
+                {showPoints}
+              </tbody>
+            </table>
+          </Drawer> 
     </div>
-    <ul>{showPoints}</ul>
-    </>
+    </div>
   )
 }
 
