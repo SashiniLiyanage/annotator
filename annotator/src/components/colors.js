@@ -1,5 +1,5 @@
 const colors = {
-    primary: {main: 'rgb(60, 140, 236)'},
+    primary: {main: 'rgb(41, 51, 62)'},
     secondary: {main: 'rgb(235, 235, 236)'},
     warning: {main: 'rgb(241, 143, 1)',contrastText: '#ffffff'},
     light: {main: 'rgb(168,199,236)',contrastText: '#ffffff'},

@@ -3,8 +3,10 @@ import {Button, Stack,Drawer, IconButton} from '@mui/material';
 import mouth from '../assets/mouth.jpg';
 import icon from '../assets/note.png';
 import colorPallete from './colors'
-import {Preview,ZoomIn,CropFree,ZoomOut,Close, CancelOutlined} from '@mui/icons-material';
+import {Preview,ZoomIn,CropFree,ZoomOut,Close, CancelOutlined, HelpOutline} from '@mui/icons-material';
 import {ArrowUpward, ArrowDownward, ArrowBack, ArrowForward} from '@mui/icons-material';
+import RegionTable from './RegionTable';
+import Help from './Help';
 
 const regionNames = ["teeth","Enemal","Hard Plate","Mole","Soft Plate","Tongue","Stain","Uvula","Gingiva","Lips"]
 const colors = colorPallete
@@ -13,7 +15,6 @@ var regions = []
 var isDragging = false;
 var isSelected = false;
 var isDrawing = true ;
-var isMoving = false;
 var polygon
 var canvas
 var ctx
@@ -45,8 +46,6 @@ class Polygon{
     this.color = defaultColor;
     this.transcolor =  defaultColor.replace(')', ', 0.6)').replace('rgb', 'rgba')
     this.type = defaultType
-    //this.randomColors = [Math.floor(Math.random()*255),Math.floor(Math.random()*255),Math.floor(Math.random()*255)];
-    //this.color = 'rgb(' + this.randomColors[0] + ', ' + this.randomColors[1] +',' + this.randomColors[2] + ')';
   }
   addPoint(p){ 
     this.points.push(point(p.x,p.y)) 
@@ -142,23 +141,31 @@ const Canvas = () => {
   const [orginalSize, setOriginalSize] = useState({width: 1, height:1})
   const [showPoints, setShowPoints] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(1)
-  const [state, setState] = React.useState(false);
+  const [state, setState] = useState(false);
+  const [help, setHelp] = useState(false);
 
   const canvaRef = useRef(null)
 
   const show_regions = () =>{
     if(isDrawing) return;
 
+    setHelp(false)
+
     var coordinates = [];
     var type = [];
+    var bbox = [];
     [...regions].forEach(region =>{
       if(region.completed){
         var pointArray = []
+        var all_x = region.points.map((p) => p["x"]);
+        var all_y = region.points.map((p) => p["y"]);
+        var bbox_arr = [Math.min(...all_x), Math.min(...all_y), Math.max(...all_x), Math.max(...all_y)]
         for (const p of region.points) {
           pointArray.push(Math.round(p.x /zoomLevel),Math.round(p.y /zoomLevel))
         }
         coordinates.push(pointArray.toString())
         type.push(region.type)
+        bbox.push(bbox_arr.toString()) 
       }
     })
 
@@ -166,12 +173,19 @@ const Canvas = () => {
       coordinates.map((points, index) =>
         <tr  key={index}>
           <td>{type[index]}</td>
-          <td>{points}</td>
+          <td>[{bbox[index]}]</td>
+          <td>[{points}]</td>
         </tr>
       )
     )
 
     if(coordinates.length === 0) return
+    setState(true)
+  }
+
+  const show_help = () =>{
+
+    setHelp(true)
     setState(true)
   }
 
@@ -183,7 +197,7 @@ const Canvas = () => {
   }
 
   const handle_keyup = (e) =>{
-    console.log("hh")
+  
     e.preventDefault()
     
     if(e.key === "Enter") {
@@ -196,10 +210,13 @@ const Canvas = () => {
   
       polygon = new Polygon(ctx)
       regions.push(polygon)
+      redraw_canvas()
+
     }
   
     if(e.key === "Delete") {
       delete_selected()
+      redraw_canvas()
     }
 
     if ( e.key === 'ArrowRight' 
@@ -207,8 +224,17 @@ const Canvas = () => {
     || e.key === 'ArrowDown'  
     || e.key === 'ArrowUp' ) {
       var del = 1;
+      if(e.shiftKey) del= 10;
       move_selected(e.key, del);
     }
+
+    if(e.key === ' '){
+      if(state) {
+        setState(false)
+        return
+      }
+      show_regions();
+    } 
 
   }
 
@@ -221,6 +247,7 @@ const Canvas = () => {
     }
 
     selectedRegion = null;
+    redraw_canvas()
   }
 
   const handleSelect = () =>{
@@ -272,32 +299,40 @@ const Canvas = () => {
     mouse.x = e.clientX - rect.left;
     mouse.y = e.clientY - rect.top;
 
-    if(e.type === "dblclick"){
-      if(isSelected){
-        [...regions].forEach(region =>{
-          if(region.isSelected && region.isPointInPoly(mouse)){
-            isMoving = true
-          }
-        })
-    
-      }
-    }
-
     if(e.type === "mousedown"){
-        handleSelect()    
+        handleSelect()  
     }
-
+    
     mouse.button = e.type === "mousedown" ? true : e.type === "mouseup" ? false : mouse.button;
+    redraw_canvas()
+
   }
 
 
+  // event listner for keypress
   useEffect(() => {
     window.addEventListener("keyup", handle_keyup);
     return () => {
-      window.removeEventListener("keydown", handle_keyup);
+      window.removeEventListener("keyup", handle_keyup);
     };
   }, [handle_keyup]);
 
+
+  // redraw the canvas
+  const redraw_canvas = () =>{
+
+    ctx.clearRect(0,0, canvas.width, canvas.height);
+    mouse.cursor = "crosshair";
+
+    regions = regions.filter(region => !region.markedForDeletion);
+
+    [...regions].forEach(region => {region.update()})
+
+    canvas.style.cursor = mouse.cursor;
+  }
+
+
+  // initial run
   useEffect(() => {
    
   canvas = canvaRef.current;
@@ -306,24 +341,15 @@ const Canvas = () => {
   polygon = new Polygon(ctx)
   regions.push(polygon)
 
-  const annotate = ()=>{
-      ctx.clearRect(0,0, canvas.width, canvas.height);
-      mouse.cursor = "crosshair";
-      [...regions].forEach(region => {region.update()})
-      
-      regions = regions.filter(region => !region.markedForDeletion);
-
-      canvas.style.cursor = mouse.cursor;
-
-      requestAnimationFrame(annotate)
-  }
-
-  annotate();
-    
-    return () => {
-      window.cancelAnimationFrame(annotate);
-    };
+  redraw_canvas()
   }, []);
+
+  // redraw if canvas size changed
+  useEffect(()=>{
+    if(size.height > 1  && size.width> 1){
+      redraw_canvas()
+    }
+  },[size])
  
   // zoom in
   const zoom_in = ()=>{
@@ -341,9 +367,9 @@ const Canvas = () => {
       }
       region.points = pointArray
     })
-   
 
     setZoomLevel(zoomLevel*1.5)
+    redraw_canvas()
   }
 
   // zoom out
@@ -364,6 +390,7 @@ const Canvas = () => {
     })
 
     setZoomLevel(zoomLevel/1.5)
+    redraw_canvas()
   }
 
   // zoom reset
@@ -384,6 +411,7 @@ const Canvas = () => {
     })
 
     setZoomLevel(1)
+    redraw_canvas()
   }
 
   // move the selected region
@@ -406,6 +434,8 @@ const Canvas = () => {
       case 'ArrowDown':
         move_y =  del;
         break;
+      default:
+        break;
       }
 
     var moved = []
@@ -416,6 +446,7 @@ const Canvas = () => {
     }
 
     selectedRegion.points = moved
+    redraw_canvas()
   }
 
   // validate move
@@ -444,6 +475,8 @@ const Canvas = () => {
       selectedRegion.transcolor = defaultColor.replace(')', ', 0.6)').replace('rgb', 'rgba')
       selectedRegion.type = name
     }
+
+    redraw_canvas()
   }
 
   // get the size of the image
@@ -463,6 +496,7 @@ const Canvas = () => {
     [...regions].forEach(region => region.markedForDeletion = true);
     polygon = new Polygon(ctx)
     regions.push(polygon)
+    redraw_canvas()
   }
 
   return (
@@ -481,6 +515,7 @@ const Canvas = () => {
     <IconButton onClick={()=>move_selected("ArrowRight", 10)} sx={{color: 'white', ml: 1}}  title="Clear Right"><ArrowForward/></IconButton>
     <IconButton onClick={delete_selected} sx={{color: 'white', ml: 1}}  title="Clear Selected"><Close/></IconButton>
     <div style={{flex: 1}}></div>
+    <IconButton onClick={show_help} sx={{color: 'white', ml: 1}} title="Help"><HelpOutline/></IconButton>
     <IconButton onClick={clear_all} sx={{color: 'white', ml: 1}} title="Clear All"><CancelOutlined/></IconButton>
     </div>
     <div className='page_body' onMouseDown={(e)=>{deselect_all(e)}}>
@@ -496,22 +531,9 @@ const Canvas = () => {
           <canvas className='main_canvas' onDoubleClick={(e)=>handle_mouse(e)} onMouseMove={(e)=>{handle_mouse(e)}} onMouseDown={(e)=>{handle_mouse(e)}} onMouseUp={(e)=>{handle_mouse(e)}} ref={canvaRef} width={size.width} height={size.height}>Sorry, Canvas functionality is not supported.</canvas>
           <img className="main_img" onLoad={(e)=>{get_dimensions(e)}}  width={size.width} height={size.height} src={mouth} alt="failed to load"/> 
         </div>
-          <Drawer
-            anchor='bottom'
-            open={state}
-            onClose={()=>{setState(false)}}
-          >
+          <Drawer anchor='bottom' open={state} onClose={()=>{setState(false)}}>
             <div style={{display: "flex", justifyContent: "flex-end"}}><IconButton aria-label="delete" onClick={()=>setState(false)} color="primary"><Close/></IconButton></div>
-            <table className='show_regions'>
-              <tbody>
-                <tr>
-                  <th>Region</th>
-                  <th>Bounding Box</th>
-                  <th>Coordinates</th>
-                </tr>
-                {showPoints}
-              </tbody>
-            </table>
+            {help?<Help/>:<RegionTable showPoints={showPoints} />}
           </Drawer> 
     </div>
     </div>

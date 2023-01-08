@@ -76,10 +76,21 @@
     height: 40px;
 }
 
-.show_regions{
+.show_regions, .show_help{
     padding: 0 20px 20px 20px;
 }
 
 .show_regions tbody tr th{
     text-align: left;
+}
+
+.key { 
+    padding:1px 6px; 
+    background:linear-gradient(to bottom,#f0f0f0,#fcfcfc); 
+    border:1px solid #e0e0e0; 
+    white-space:nowrap; 
+    color:#303030; 
+    border-bottom-width:2px; 
+    border-radius:3px;
+    width: fit-content;
 }
