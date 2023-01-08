@@ -1865,7 +1865,7 @@ function is_on_polygon_vertex(all_points_x, all_points_y, px, py) {
     if ( Math.abs(all_points_x[i] - px) < VIA_POLYGON_VERTEX_MATCH_TOL &&
          Math.abs(all_points_y[i] - py) < VIA_POLYGON_VERTEX_MATCH_TOL ) {
       return (VIA_POLYGON_RESIZE_VERTEX_OFFSET+i);
-    }
+    }is_on_polygon_edge
   }
   return 0;
 }

@@ -5,6 +5,7 @@ const RegionTable = ({showPoints}) => {
         <table className='show_regions'>
               <tbody>
                 <tr>
+                  <th>ID</th>
                   <th>Region</th>
                   <th>Bounding Box</th>
                   <th>Coordinates</th>

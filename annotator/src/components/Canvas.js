@@ -1,13 +1,15 @@
 import React, { useRef, useEffect, useState } from 'react';
 import {Button, Stack,Drawer, IconButton} from '@mui/material';
+import {Close} from '@mui/icons-material';
 import mouth from '../assets/mouth.jpg';
 import icon from '../assets/note.png';
 import colorPallete from './colors'
-import {Preview,ZoomIn,CropFree,ZoomOut,Close, CancelOutlined, HelpOutline} from '@mui/icons-material';
-import {ArrowUpward, ArrowDownward, ArrowBack, ArrowForward} from '@mui/icons-material';
 import RegionTable from './RegionTable';
 import Help from './Help';
+import ButtonPanel from './ButtonPanel';
 
+// global variables 
+// todo: check whether we could use useStates instead
 const regionNames = ["teeth","Enemal","Hard Plate","Mole","Soft Plate","Tongue","Stain","Uvula","Gingiva","Lips"]
 const colors = colorPallete
 const mouse = {x : 0, y : 0, button : 0, cursor: 'crosshair'};
@@ -15,6 +17,8 @@ var regions = []
 var isDragging = false;
 var isSelected = false;
 var isDrawing = true ;
+var isLabelVisible = false;
+var labelType = 'name';
 var polygon
 var canvas
 var ctx
@@ -22,8 +26,10 @@ var selectedRegion
 var defaultType = "Unknown"
 var defaultColor = 'rgb(0,0,0)'
 
+// return points as Json
 const point = (x,y) => ({x,y});
 
+// draw circle around given point
 function drawCircle(ctx, pos,size=4){
   ctx.strokeStyle = "red";
   ctx.fillStyle = "red";
@@ -33,6 +39,7 @@ function drawCircle(ctx, pos,size=4){
   ctx.stroke();
 }
 
+// polygon class
 class Polygon{
   constructor(ctx){
     this.ctx = ctx;
@@ -143,6 +150,7 @@ const Canvas = () => {
   const [zoomLevel, setZoomLevel] = useState(1)
   const [state, setState] = useState(false);
   const [help, setHelp] = useState(false);
+  const [labelVisibility, setLabelVisibility] = useState(isLabelVisible);
 
   const canvaRef = useRef(null)
 
@@ -172,6 +180,7 @@ const Canvas = () => {
     setShowPoints(
       coordinates.map((points, index) =>
         <tr  key={index}>
+          <td>{index+1}</td>
           <td>{type[index]}</td>
           <td>[{bbox[index]}]</td>
           <td>[{points}]</td>
@@ -189,11 +198,29 @@ const Canvas = () => {
     setState(true)
   }
 
+  // toggle labels
+  // todo: use only on variable
+  const show_label = ()=>{
+    isLabelVisible = !isLabelVisible
+    setLabelVisibility(!labelVisibility)
+    redraw_ids()
+  }
+
+  const label_type = () =>{
+    if(labelType === 'id') labelType = 'name'
+    else labelType = 'id'
+
+    redraw_canvas()
+    redraw_ids()
+  }
+
   const delete_selected = () =>{
     if(selectedRegion){
       selectedRegion.markedForDeletion = true;
       isSelected = false;
     }
+    redraw_canvas()
+    redraw_ids()
   }
 
   const handle_keyup = (e) =>{
@@ -211,12 +238,25 @@ const Canvas = () => {
       polygon = new Polygon(ctx)
       regions.push(polygon)
       redraw_canvas()
+      redraw_ids()
+    }
+
+    if(e.key === "Escape") {
+      
+      [...regions].forEach(region => {
+        if(!region.completed) region.markedForDeletion = true;
+      });
+  
+      polygon = new Polygon(ctx)
+      regions.push(polygon)
+      redraw_canvas()
 
     }
   
     if(e.key === "Delete") {
       delete_selected()
       redraw_canvas()
+      redraw_ids()
     }
 
     if ( e.key === 'ArrowRight' 
@@ -248,6 +288,7 @@ const Canvas = () => {
 
     selectedRegion = null;
     redraw_canvas()
+    redraw_ids()
   }
 
   const handleSelect = () =>{
@@ -305,7 +346,7 @@ const Canvas = () => {
     
     mouse.button = e.type === "mousedown" ? true : e.type === "mouseup" ? false : mouse.button;
     redraw_canvas()
-
+    redraw_ids()
   }
 
 
@@ -329,6 +370,33 @@ const Canvas = () => {
     [...regions].forEach(region => {region.update()})
 
     canvas.style.cursor = mouse.cursor;
+
+  }
+
+  // redraw the region ids
+  const redraw_ids = () =>{
+
+    if(!isLabelVisible){
+      redraw_canvas()
+      return
+    } 
+
+    var text, text_info, height, width;
+
+    for(var i=0; i< regions.length; i++){
+      if(regions[i].completed){
+        if(labelType === 'id') text = (i+1).toString()
+        else text = regions[i].type
+        text_info = ctx.measureText(text);
+        height = ctx.font.match(/\d+/).pop() || 10;
+        width = text_info.width;
+        ctx.fillStyle = "black";
+        ctx.fillRect(regions[i].points[0].x -1 , regions[i].points[0].y - height-2, width+2, height-(-2));
+        ctx.fillStyle = "yellow";
+        ctx.textBaseline = "bottom";
+        ctx.fillText(text,regions[i].points[0].x, regions[i].points[0].y);
+      }
+    }
   }
 
 
@@ -348,6 +416,7 @@ const Canvas = () => {
   useEffect(()=>{
     if(size.height > 1  && size.width> 1){
       redraw_canvas()
+      redraw_ids()
     }
   },[size])
  
@@ -369,7 +438,6 @@ const Canvas = () => {
     })
 
     setZoomLevel(zoomLevel*1.5)
-    redraw_canvas()
   }
 
   // zoom out
@@ -390,7 +458,6 @@ const Canvas = () => {
     })
 
     setZoomLevel(zoomLevel/1.5)
-    redraw_canvas()
   }
 
   // zoom reset
@@ -411,7 +478,6 @@ const Canvas = () => {
     })
 
     setZoomLevel(1)
-    redraw_canvas()
   }
 
   // move the selected region
@@ -447,6 +513,7 @@ const Canvas = () => {
 
     selectedRegion.points = moved
     redraw_canvas()
+    redraw_ids()
   }
 
   // validate move
@@ -477,6 +544,7 @@ const Canvas = () => {
     }
 
     redraw_canvas()
+    redraw_ids()
   }
 
   // get the size of the image
@@ -501,41 +569,38 @@ const Canvas = () => {
 
   return (
     <div className='body'>
+
+    {/********************** buuton panel **********************/}
     <div className='nav_bar'>
-    <div className='icon'>
-      <img src={icon} alt='icon'></img>
+    <div className='icon'><img src={icon} alt='icon'/></div>
+    <ButtonPanel func={{show_regions, zoom_in, zoom_out, zoom_reset, move_selected, delete_selected, show_help, clear_all, show_label, label_type}} labelVisibility={labelVisibility}/>
     </div>
-    <IconButton onClick={show_regions} sx={{color: 'white', ml: 1}} title="Show Regions"><Preview/></IconButton>
-    <IconButton onClick={zoom_in} sx={{color: 'white', ml: 1}}  title="Zoom In"><ZoomIn/></IconButton>
-    <IconButton onClick={zoom_out} sx={{color: 'white', ml: 1}}  title="Zoom Out"><ZoomOut/></IconButton>
-    <IconButton onClick={zoom_reset} sx={{color: 'white', ml: 1}}  title="Zoom Reset"><CropFree/></IconButton>
-    <IconButton onClick={()=>move_selected("ArrowUp", 10)} sx={{color: 'white', ml: 1}}  title="Move Up"><ArrowUpward/></IconButton>
-    <IconButton onClick={()=>move_selected("ArrowDown", 10)} sx={{color: 'white', ml: 1}}  title="Move Down"><ArrowDownward/></IconButton>
-    <IconButton onClick={()=>move_selected("ArrowLeft", 10)} sx={{color: 'white', ml: 1}}  title="Move Left"><ArrowBack/></IconButton>
-    <IconButton onClick={()=>move_selected("ArrowRight", 10)} sx={{color: 'white', ml: 1}}  title="Clear Right"><ArrowForward/></IconButton>
-    <IconButton onClick={delete_selected} sx={{color: 'white', ml: 1}}  title="Clear Selected"><Close/></IconButton>
-    <div style={{flex: 1}}></div>
-    <IconButton onClick={show_help} sx={{color: 'white', ml: 1}} title="Help"><HelpOutline/></IconButton>
-    <IconButton onClick={clear_all} sx={{color: 'white', ml: 1}} title="Clear All"><CancelOutlined/></IconButton>
-    </div>
+
     <div className='page_body' onMouseDown={(e)=>{deselect_all(e)}}>
+
+        {/********************* side bar **********************/}
         <div className='side_bar'>
-        <Stack direction="column" spacing={1} sx={{padding: "10px 5px"}}>
-        {regionNames.map((name, index) =>{
-            var colorId = 'r'+index.toString()
-            return (<Button key={index} variant='contained' color={colorId} onClick={()=>set_types(colorId, name)} value={name} size='small' fullWidth>{name}</Button>)
-        })}
-        </Stack>
+          <Stack direction="column" spacing={1} sx={{padding: "10px 5px"}}>
+          {regionNames.map((name, index) =>{
+              var colorId = 'r'+index.toString()
+              return (<Button key={index} variant='contained' color={colorId} onClick={()=>set_types(colorId, name)} value={name} size='small' fullWidth>{name}</Button>)
+          })}
+          </Stack>
         </div>
+
+        {/********************** working area **********************/}
         <div className="work_area">
           <canvas className='main_canvas' onDoubleClick={(e)=>handle_mouse(e)} onMouseMove={(e)=>{handle_mouse(e)}} onMouseDown={(e)=>{handle_mouse(e)}} onMouseUp={(e)=>{handle_mouse(e)}} ref={canvaRef} width={size.width} height={size.height}>Sorry, Canvas functionality is not supported.</canvas>
           <img className="main_img" onLoad={(e)=>{get_dimensions(e)}}  width={size.width} height={size.height} src={mouth} alt="failed to load"/> 
         </div>
-          <Drawer anchor='bottom' open={state} onClose={()=>{setState(false)}}>
-            <div style={{display: "flex", justifyContent: "flex-end"}}><IconButton aria-label="delete" onClick={()=>setState(false)} color="primary"><Close/></IconButton></div>
-            {help?<Help/>:<RegionTable showPoints={showPoints} />}
-          </Drawer> 
+
+        {/********************** bottom panel **********************/}
+        <Drawer anchor='bottom' open={state} onClose={()=>{setState(false)}}>
+          <div style={{display: "flex", justifyContent: "flex-end"}}><IconButton aria-label="delete" onClick={()=>setState(false)} color="primary"><Close/></IconButton></div>
+          {help?<Help/>:<RegionTable showPoints={showPoints} />}
+        </Drawer> 
     </div>
+
     </div>
   )
 }

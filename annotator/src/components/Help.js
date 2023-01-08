@@ -25,6 +25,9 @@ const Help = props => {
                 <td><div className='key'>Enter</div></td><td> Finish Drawing</td>
             </tr>
             <tr>
+                <td><div className='key'>Esc</div></td><td> Cancle Drawing</td>
+            </tr>
+            <tr>
                 <td><div className='key'>Space</div></td><td> Toggle Preview</td>
             </tr>
             <tr>
