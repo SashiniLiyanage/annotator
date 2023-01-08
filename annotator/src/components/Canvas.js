@@ -167,7 +167,8 @@ const Canvas = () => {
         var pointArray = []
         var all_x = region.points.map((p) => p["x"]);
         var all_y = region.points.map((p) => p["y"]);
-        var bbox_arr = [Math.min(...all_x), Math.min(...all_y), Math.max(...all_x), Math.max(...all_y)]
+        var bbox_arr = [Math.round(Math.min(...all_x)/zoomLevel), Math.round(Math.min(...all_y)/zoomLevel), 
+        Math.round(Math.max(...all_x)/zoomLevel), Math.round(Math.max(...all_y)/zoomLevel)]
         for (const p of region.points) {
           pointArray.push(Math.round(p.x /zoomLevel),Math.round(p.y /zoomLevel))
         }
@@ -250,6 +251,7 @@ const Canvas = () => {
       polygon = new Polygon(ctx)
       regions.push(polygon)
       redraw_canvas()
+      redraw_ids()
 
     }
   
@@ -422,7 +424,7 @@ const Canvas = () => {
  
   // zoom in
   const zoom_in = ()=>{
-    if(isDrawing || zoomLevel > 4) return
+    if(zoomLevel > 4) return
 
     setSize({
       width: orginalSize.width * zoomLevel *1.5,
@@ -442,7 +444,7 @@ const Canvas = () => {
 
   // zoom out
   const zoom_out = ()=>{
-    if(isDrawing || zoomLevel < 0.25) return
+    if(zoomLevel < 0.25) return
 
     setSize({
       width: orginalSize.width * zoomLevel /1.5 ,
@@ -462,7 +464,7 @@ const Canvas = () => {
 
   // zoom reset
   const zoom_reset = ()=>{
-    if(isDrawing || zoomLevel === 1) return
+    if(zoomLevel === 1) return
 
     setSize({
       width: orginalSize.width ,

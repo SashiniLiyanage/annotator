@@ -8,7 +8,7 @@ const RegionTable = ({showPoints}) => {
                   <th>ID</th>
                   <th>Region</th>
                   <th>Bounding Box</th>
-                  <th>Coordinates</th>
+                  <th>Coordinates (COCO format)</th>
                 </tr>
                 {showPoints}
               </tbody>
