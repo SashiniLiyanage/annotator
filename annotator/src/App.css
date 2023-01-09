@@ -77,6 +77,10 @@
     text-align: left;
 }
 
+.show_help tbody tr td{
+    min-width: 200px;
+}
+
 .key { 
     padding:1px 6px; 
     background:linear-gradient(to bottom,#f0f0f0,#fcfcfc); 
@@ -86,4 +90,13 @@
     border-bottom-width:2px; 
     border-radius:3px;
     width: fit-content;
+}
+
+
+.invisible_file_input { 
+    width:25px; 
+    height:25px; 
+    opacity: 0;  
+    overflow:hidden; 
+    position:absolute;
 }

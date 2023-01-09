@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import {Button, Stack,Drawer, IconButton} from '@mui/material';
 import {Close} from '@mui/icons-material';
-import mouth from '../assets/mouth.jpg';
+import mouth from '../assets/mouth.png';
 import icon from '../assets/note.png';
 import colorPallete from './colors'
 import RegionTable from './RegionTable';
@@ -24,7 +24,8 @@ var canvas
 var ctx
 var selectedRegion
 var defaultType = "Unknown"
-var defaultColor = 'rgb(0,0,0)'
+var defaultColor = 'rgb(0, 0, 0)'
+var opacity = true;
 
 // return points as Json
 const point = (x,y) => ({x,y});
@@ -75,7 +76,7 @@ class Polygon{
       //   this.ctx.moveTo(p.x + 4,p.y);
       //   this.ctx.arc(p.x,p.y,3,0,Math.PI *2);
       // }
-      this.ctx.fill();
+      if(opacity) this.ctx.fill();
       this.ctx.stroke();
       
 
@@ -215,6 +216,12 @@ const Canvas = () => {
     redraw_ids()
   }
 
+  const opacity_change = ()=>{
+    opacity = !opacity;
+    redraw_canvas()
+    redraw_ids()
+  }
+
   const delete_selected = () =>{
     if(selectedRegion){
       selectedRegion.markedForDeletion = true;
@@ -265,6 +272,7 @@ const Canvas = () => {
     || e.key === 'ArrowLeft'  
     || e.key === 'ArrowDown'  
     || e.key === 'ArrowUp' ) {
+      e.preventDefault()
       var del = 1;
       if(e.shiftKey) del= 10;
       move_selected(e.key, del);
@@ -575,7 +583,8 @@ const Canvas = () => {
     {/********************** buuton panel **********************/}
     <div className='nav_bar'>
     <div className='icon'><img src={icon} alt='icon'/></div>
-    <ButtonPanel func={{show_regions, zoom_in, zoom_out, zoom_reset, move_selected, delete_selected, show_help, clear_all, show_label, label_type}} labelVisibility={labelVisibility}/>
+    <ButtonPanel func={{show_regions, zoom_in, zoom_out, zoom_reset, move_selected, 
+      delete_selected, show_help, clear_all, show_label, label_type, opacity_change}} labelVisibility={labelVisibility}/>
     </div>
 
     <div className='page_body' onMouseDown={(e)=>{deselect_all(e)}}>
