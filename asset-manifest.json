@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/SashiniLiyanage/annotator/static/css/main.b22ed5bb.css",
+    "main.js": "/SashiniLiyanage/annotator/static/js/main.1812cbef.js",
+    "static/media/mouth.png": "/SashiniLiyanage/annotator/static/media/mouth.f23513ad02b61e49fd36.png",
+    "static/media/note.png": "/SashiniLiyanage/annotator/static/media/note.a43ef069ede5f12ee586.png",
+    "index.html": "/SashiniLiyanage/annotator/index.html",
+    "main.b22ed5bb.css.map": "/SashiniLiyanage/annotator/static/css/main.b22ed5bb.css.map",
+    "main.1812cbef.js.map": "/SashiniLiyanage/annotator/static/js/main.1812cbef.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.b22ed5bb.css",
+    "static/js/main.1812cbef.js"
+  ]
+}
