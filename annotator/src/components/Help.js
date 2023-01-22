@@ -1,5 +1,5 @@
 import React from 'react';
-import {Preview,ZoomIn,CropFree,ZoomOut,Close, CancelOutlined, HelpOutline, Style, Label} from '@mui/icons-material';
+import {Preview,ZoomIn,CropFree,ZoomOut,Close, CancelOutlined, Style, Label, Check} from '@mui/icons-material';
 import {ArrowUpward, ArrowDownward, ArrowBack, ArrowForward, Opacity} from '@mui/icons-material';
 
 const Help = props => {
@@ -46,7 +46,13 @@ const Help = props => {
             </tr>
             <tr>
                 <td>
-                    <ZoomIn style={{color:"gray"}}/><ZoomIn style={{color:"gray"}}/><CropFree style={{color:"gray"}}/>
+                    <Check style={{color:"gray"}}/>
+                </td>
+                <td> Finish drawing</td>
+            </tr>
+            <tr>
+                <td>
+                    <ZoomIn style={{color:"gray"}}/><ZoomOut style={{color:"gray"}}/><CropFree style={{color:"gray"}}/>
                 </td>
                 <td> Zoom In, Zoom Out, Original Size</td>
             </tr>

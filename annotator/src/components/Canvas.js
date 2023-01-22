@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
-import {Button, Stack,Drawer, IconButton} from '@mui/material';
+import {Drawer, IconButton, FormControl, Select, MenuItem} from '@mui/material';
 import {Close} from '@mui/icons-material';
-import mouth from '../assets/mouth.png';
 import icon from '../assets/note.png';
 import colorPallete from './colors'
 import RegionTable from './RegionTable';
@@ -10,7 +9,7 @@ import ButtonPanel from './ButtonPanel';
 
 // global variables 
 // todo: check whether we could use useStates instead
-const regionNames = ["teeth","Enemal","Hard Plate","Mole","Soft Plate","Tongue","Stain","Uvula","Gingiva","Lips"]
+const regionNames = ["Oral Cavity","Teeth","Enemal","Hard Plate","Mole","Soft Plate","Tongue","Stain","Uvula","Gingiva","Lips"]
 const colors = colorPallete
 const mouse = {x : 0, y : 0, button : 0, cursor: 'crosshair'};
 var regions = []
@@ -23,8 +22,8 @@ var polygon
 var canvas
 var ctx
 var selectedRegion
-var defaultType = "Unknown"
-var defaultColor = 'rgb(0, 0, 0)'
+var defaultType = "Oral Cavity"
+var defaultColor = 'rgb(255, 201, 60)'
 var opacity = true;
 
 // return points as Json
@@ -147,11 +146,19 @@ const Canvas = () => {
   
   const [size, setSize] = useState({width: 1, height:1})
   const [orginalSize, setOriginalSize] = useState({width: 1, height:1})
-  const [showPoints, setShowPoints] = useState(false)
+  const [showPoints, setShowPoints] = useState({type:[], bbox:[], coordinates:[]})
   const [zoomLevel, setZoomLevel] = useState(1)
   const [state, setState] = useState(false);
   const [help, setHelp] = useState(false);
   const [labelVisibility, setLabelVisibility] = useState(isLabelVisible);
+  const [imageSrc, setImageSrc] = useState(null);
+  const [selection, setSelection] = useState('Oral Cavity')
+  
+  const handleChange = (event) => {
+    setSelection(event.target.value);
+    var index = 'r'+regionNames.indexOf(event.target.value);
+    set_types(index, event.target.value);
+  };
 
   const canvaRef = useRef(null)
 
@@ -179,16 +186,7 @@ const Canvas = () => {
       }
     })
 
-    setShowPoints(
-      coordinates.map((points, index) =>
-        <tr  key={index}>
-          <td>{index+1}</td>
-          <td>{type[index]}</td>
-          <td>[{bbox[index]}]</td>
-          <td>[{points}]</td>
-        </tr>
-      )
-    )
+    setShowPoints({type,bbox,coordinates})
 
     if(coordinates.length === 0) return
     setState(true)
@@ -231,22 +229,25 @@ const Canvas = () => {
     redraw_ids()
   }
 
+  const finish_drawing = () =>{
+    [...regions].forEach(region => {
+      if(region.points.length < 3) region.markedForDeletion = true;
+      region.completed = true
+      region.isSelected = false
+    });
+
+    polygon = new Polygon(ctx)
+    regions.push(polygon)
+    redraw_canvas()
+    redraw_ids()
+  }
+
   const handle_keyup = (e) =>{
   
     e.preventDefault()
     
     if(e.key === "Enter") {
-      
-      [...regions].forEach(region => {
-        if(region.points.length < 3) region.markedForDeletion = true;
-        region.completed = true
-        region.isSelected = false
-      });
-  
-      polygon = new Polygon(ctx)
-      regions.push(polygon)
-      redraw_canvas()
-      redraw_ids()
+      finish_drawing()
     }
 
     if(e.key === "Escape") {
@@ -413,14 +414,23 @@ const Canvas = () => {
   // initial run
   useEffect(() => {
    
-  canvas = canvaRef.current;
-  ctx = canvas.getContext('2d');
+    canvas = canvaRef.current;
+    ctx = canvas.getContext('2d');
 
-  polygon = new Polygon(ctx)
-  regions.push(polygon)
+    mouse.button = 0;
+    mouse.cursor = 'crosshair';
+    regions = [];
+    isDragging = false;
+    isSelected = false;
+    isDrawing = true ;
+    selectedRegion = null;
 
-  redraw_canvas()
-  }, []);
+    polygon = new Polygon(ctx)
+    regions.push(polygon)
+
+    redraw_canvas();
+
+  }, [imageSrc]);
 
   // redraw if canvas size changed
   useEffect(()=>{
@@ -582,28 +592,26 @@ const Canvas = () => {
 
     {/********************** buuton panel **********************/}
     <div className='nav_bar'>
-    <div className='icon'><img src={icon} alt='icon'/></div>
-    <ButtonPanel func={{show_regions, zoom_in, zoom_out, zoom_reset, move_selected, 
-      delete_selected, show_help, clear_all, show_label, label_type, opacity_change}} labelVisibility={labelVisibility}/>
+    <div className='icon'><img src={icon} alt='icon' draggable="false"/></div>
+
+    <FormControl sx={{width:'200px', mx:1}}>
+        <Select size='small' value={selection} onChange={handleChange} style={{backgroundColor: "white"}}>
+          {regionNames.map((name, index) =>{
+            return (<MenuItem key={index} value={name}><div className='color_square' style={{backgroundColor:colorPallete['r'+index].main}}></div>{name}</MenuItem>)
+          })}
+        </Select>
+    </FormControl>
+    <ButtonPanel func={{finish_drawing,show_regions, zoom_in, zoom_out, zoom_reset, move_selected, 
+      delete_selected, show_help, clear_all, show_label, label_type, opacity_change}} labelVisibility={labelVisibility} setImageSrc={setImageSrc}/>
     </div>
 
     <div className='page_body' onMouseDown={(e)=>{deselect_all(e)}}>
 
-        {/********************* side bar **********************/}
-        <div className='side_bar'>
-          <Stack direction="column" spacing={1} sx={{padding: "10px 5px"}}>
-          {regionNames.map((name, index) =>{
-              var colorId = 'r'+index.toString()
-              return (<Button key={index} variant='contained' color={colorId} onClick={()=>set_types(colorId, name)} value={name} size='small' fullWidth>{name}</Button>)
-          })}
-          </Stack>
-        </div>
-
         {/********************** working area **********************/}
         <div className="work_area">
           <canvas className='main_canvas' onDoubleClick={(e)=>handle_mouse(e)} onMouseMove={(e)=>{handle_mouse(e)}} onMouseDown={(e)=>{handle_mouse(e)}} onMouseUp={(e)=>{handle_mouse(e)}} ref={canvaRef} width={size.width} height={size.height}>Sorry, Canvas functionality is not supported.</canvas>
-          <img className="main_img" onLoad={(e)=>{get_dimensions(e)}}  width={size.width} height={size.height} src={mouth} alt="failed to load"/> 
-        </div>
+          {imageSrc && <img className="main_img" onLoad={(e)=>{get_dimensions(e)}}  width={size.width} height={size.height} src={imageSrc} alt="failed to load"/> }
+          </div>
 
         {/********************** bottom panel **********************/}
         <Drawer anchor='bottom' open={state} onClose={()=>{setState(false)}}>

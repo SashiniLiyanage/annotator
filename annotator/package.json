@@ -1,7 +1,7 @@
 {
   "name": "annotator",
   "version": "0.1.0",
-  "homepage": "https://gitname.github.io/SashiniLiyanage/annotator",
+  "homepage": "https://sashiniliyanage.github.io/annotator/",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.10.5",

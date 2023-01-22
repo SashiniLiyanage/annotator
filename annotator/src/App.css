@@ -8,17 +8,25 @@
 .main_canvas{
     position: absolute;
     top: 10px;
-    left: 110px;
+    left: 10px;
     z-index: 10;
 }
 
 .work_area{
-    padding: 10px 10px 10px 110px;
+    padding: 10px;
     position: relative;
 }
 
 .main_img{
     user-select: none;
+}
+
+.color_square{
+	width: 14px;
+	height: 14px;
+	border-radius: 3px;
+	display: inline-block;
+	margin-right: 5px;
 }
 
 .page_body{
@@ -55,7 +63,7 @@
 }
 
 .icon{
-   width: 100px;
+   width: 50px;
    height: 100%;
    background-color: var(--primary-color);
    display: flex;
@@ -75,6 +83,19 @@
 
 .show_regions tbody tr th{
     text-align: left;
+}
+
+.coordinates-wrapper{
+    display: flex;
+    flex-direction: row;
+}
+
+.coordinates{
+    max-width: 30ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0;
+    margin: 0;
 }
 
 .show_help tbody tr td{
